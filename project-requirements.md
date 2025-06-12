@@ -26,7 +26,7 @@ To create a fun, educational, and competitive game that connects plant lovers an
 
 #### **3.1. User Account & Profile**
 
-* Users must be able to create an account (e.g., via Apple Sign-In, Google, Email).  
+* Users must be able to create an account (e.g., via Apple Sign-In, Google). We only accept third-party logins, we will not be keeping our own user list.  
 * User profiles will display:  
   * Username  
   * Profile Picture / Avatar  
