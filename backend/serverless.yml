@@ -1,0 +1,130 @@
+service: botany-battle-backend
+
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  stage: ${opt:stage, 'dev'}
+  region: ${opt:region, 'us-west-2'}
+  environment:
+    STAGE: ${self:provider.stage}
+    REGION: ${self:provider.region}
+    DYNAMODB_TABLE: ${self:service}-${self:provider.stage}
+    REDIS_HOST: ${self:custom.redis.host}
+    REDIS_PORT: ${self:custom.redis.port}
+    S3_BUCKET: ${self:service}-${self:provider.stage}
+    COGNITO_USER_POOL_ID: ${self:custom.cognito.userPoolId}
+    COGNITO_CLIENT_ID: ${self:custom.cognito.clientId}
+
+custom:
+  esbuild:
+    bundle: true
+    minify: true
+    sourcemap: true
+    exclude: ['aws-sdk']
+    target: 'node18'
+    platform: 'node'
+  redis:
+    host: ${self:custom.redis.${self:provider.stage}.host}
+    port: ${self:custom.redis.${self:provider.stage}.port}
+    dev:
+      host: localhost
+      port: 6379
+    prod:
+      host: ${self:custom.redis.prodEndpoint}
+      port: 6379
+  cognito:
+    userPoolId: ${self:custom.cognito.${self:provider.stage}.userPoolId}
+    clientId: ${self:custom.cognito.${self:provider.stage}.clientId}
+    dev:
+      userPoolId: ${ssm:/botany-battle/${self:provider.stage}/cognito/user-pool-id}
+      clientId: ${ssm:/botany-battle/${self:provider.stage}/cognito/client-id}
+    prod:
+      userPoolId: ${ssm:/botany-battle/${self:provider.stage}/cognito/user-pool-id}
+      clientId: ${ssm:/botany-battle/${self:provider.stage}/cognito/client-id}
+
+functions:
+  auth:
+    handler: src/functions/auth/handler.handler
+    events:
+      - http:
+          path: /auth
+          method: post
+          cors: true
+    environment:
+      FUNCTION_NAME: auth
+
+  game:
+    handler: src/functions/game/handler.handler
+    events:
+      - http:
+          path: /game
+          method: post
+          cors: true
+      - websocket:
+          route: $connect
+      - websocket:
+          route: $disconnect
+      - websocket:
+          route: $default
+    environment:
+      FUNCTION_NAME: game
+
+  plant:
+    handler: src/functions/plant/handler.handler
+    events:
+      - http:
+          path: /plant
+          method: get
+          cors: true
+    environment:
+      FUNCTION_NAME: plant
+
+  shop:
+    handler: src/functions/shop/handler.handler
+    events:
+      - http:
+          path: /shop
+          method: post
+          cors: true
+    environment:
+      FUNCTION_NAME: shop
+
+resources:
+  Resources:
+    GameTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.DYNAMODB_TABLE}
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+          - AttributeName: userId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        GlobalSecondaryIndexes:
+          - IndexName: UserIdIndex
+            KeySchema:
+              - AttributeName: userId
+                KeyType: HASH
+            Projection:
+              ProjectionType: ALL
+        BillingMode: PAY_PER_REQUEST
+
+    GameBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: ${self:provider.environment.S3_BUCKET}
+        CorsConfiguration:
+          CorsRules:
+            - AllowedHeaders: ['*']
+              AllowedMethods: [GET, PUT, POST, DELETE]
+              AllowedOrigins: ['*']
+              MaxAge: 3000
+
+plugins:
+  - serverless-esbuild
+  - serverless-offline 
