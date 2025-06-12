@@ -10,13 +10,15 @@
     "lint": "eslint . --ext .ts",
     "format": "prettier --write \"**/*.{ts,js,json,md}\"",
     "deploy:dev": "serverless deploy --stage dev",
-    "deploy:prod": "serverless deploy --stage prod"
+    "deploy:prod": "serverless deploy --stage prod",
+    "setup:cognito": "ts-node scripts/setup-cognito.ts"
   },
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.0.0",
     "@aws-sdk/client-elasticache": "^3.0.0",
     "@aws-sdk/client-s3": "^3.0.0",
     "@aws-sdk/client-cognito-identity-provider": "^3.0.0",
+    "@aws-sdk/client-ssm": "^3.0.0",
     "aws-lambda": "^1.0.7",
     "axios": "^1.6.0",
     "ioredis": "^5.3.0",
@@ -38,6 +40,7 @@
     "serverless-esbuild": "^1.0.0",
     "serverless-offline": "^13.0.0",
     "ts-jest": "^29.0.0",
+    "ts-node": "^10.9.0",
     "typescript": "^5.0.0"
   }
 } 

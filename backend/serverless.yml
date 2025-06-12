@@ -32,8 +32,9 @@ custom:
       host: localhost
       port: 6379
     prod:
-      host: ${self:custom.redis.prodEndpoint}
+      host: placeholder-prod-redis-host
       port: 6379
+      prodEndpoint: placeholder-prod-redis-endpoint
   cognito:
     userPoolId: ${self:custom.cognito.${self:provider.stage}.userPoolId}
     clientId: ${self:custom.cognito.${self:provider.stage}.clientId}
