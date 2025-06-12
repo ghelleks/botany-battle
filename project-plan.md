@@ -1,113 +1,393 @@
-### **Project Plan: Botany Battle**
+# Botany Battle - Functional Project Plan
 
-**Version: 1.0**  
-**Date: June 12, 2025**
+## Phase 1: Project Setup (Week 1)
 
-### **1\. Overview**
+### Step 1: Development Environment Setup
+**Tasks:**
+- Initialize Git repository
+- Set up AWS development account
+- Configure CI/CD pipeline
+- Set up development tools
+- Create project documentation structure
 
-This document outlines the development plan for the "Botany Battle" iOS application. The project is broken down into five distinct phases, designed to be completed sequentially. This phased approach will ensure that foundational elements are in place before more complex features are implemented, reducing risk and simplifying the development process for a junior developer.
+**Deliverables:**
+- Git repository with initial commit
+- AWS account with IAM users and roles
+- GitHub Actions workflow files
+- Development environment setup guide
+- Project documentation structure in `/docs`
 
-### **2\. Development Phases**
+**Tests:**
+- CI pipeline runs successfully
+- AWS credentials work
+- Development tools are properly configured
 
-#### **Phase 1: Foundation & Core Data (Estimated Time: 2 Weeks)**
+### Step 2: Backend Foundation
+**Tasks:**
+- Set up Serverless Framework
+- Configure API Gateway
+- Set up DynamoDB tables
+- Configure ElastiCache
+- Set up S3 buckets
+- Implement basic security measures
 
-* **Goal:** Establish the project's backend, data structure, and basic user interface. At the end of this phase, we will have a non-interactive app that can display plant data.  
-* **Key Tasks for Junior Developer:**  
-  * **Task 1.1: Project Setup:**  
-    * Initialize a new Xcode project for the iOS application.  
-    * Set up the basic file structure and import necessary libraries.  
-  * **Task 1.2: Plant Database Implementation:**  
-    * Create a local or cloud-based database (e.g., Firebase Firestore, SwiftData) to store plant information.  
-    * Define the data model for a "Plant" object, including fields for:  
-      * commonName (String)  
-      * scientificName (String)  
-      * imageURLs (Array of Strings)  
-      * factOrTip (String)  
-      * difficulty (Enum: Easy, Medium, Hard)  
-  * **Task 1.3: Populate Initial Data:**  
-    * Manually add 20-30 sample plants to the database for testing purposes. Ensure a mix of difficulties and that all data fields are filled.  
-  * **Task 1.4: Create a Basic Plant Viewer:**  
-    * Develop a simple, single-screen UI that fetches and displays a random plant from the database.  
-    * The view should show the plant's image and its common name. This will serve as a testbed for the database connection.
+**Deliverables:**
+- `serverless.yml` configuration
+- API Gateway endpoints documentation
+- DynamoDB table schemas
+- ElastiCache configuration
+- S3 bucket policies
+- Security configuration documentation
 
-#### **Phase 2: User Authentication & Profiles (Estimated Time: 1.5 Weeks)**
+**Tests:**
+- Serverless deployment succeeds
+- API Gateway endpoints are accessible
+- DynamoDB tables are created
+- ElastiCache connection works
+- S3 bucket access is restricted
+- Security measures are in place
 
-* **Goal:** Implement user accounts and profile management. At the end of this phase, users will be able to sign up, log in, and view a basic profile screen.  
-* **Key Tasks for Junior Developer:**  
-  * **Task 2.1: Authentication Integration:**  
-    * Integrate an authentication service (e.g., Apple Sign-In, Firebase Authentication).  
-    * Create UI screens for user sign-up and login.  
-  * **Task 2.2: User Data Model:**  
-    * Extend the database to include a "Users" collection.  
-    * Define the data model for a "User" object, including:  
-      * username (String)  
-      * profilePictureURL (String)  
-      * winLossRatio (Number)  
-      * totalWins (Number)  
-      * rank (String)  
-      * trophyBalance (Number)  
-  * **Task 2.3: Profile Screen UI:**  
-    * Create a profile screen that displays all the information from the user's data model.  
-    * Allow the user to set their username and upload a profile picture.
+### Step 3: iOS Foundation
+**Tasks:**
+- Create Xcode project
+- Set up Swift Package Manager
+- Implement core architecture
+- Create design system
+- Set up navigation
+- Configure development environment
 
-#### **Phase 3: Core Gameplay Loop (Estimated Time: 3 Weeks)**
+**Deliverables:**
+- Xcode project with initial structure
+- `Package.swift` with dependencies
+- Core architecture implementation
+- Design system documentation
+- Navigation flow documentation
+- Development environment guide
 
-* **Goal:** Build the main, single-player "battle" experience. While not yet multiplayer, this phase will implement the entire round-based guessing game against a "dummy" opponent.  
-* **Key Tasks for Junior Developer:**  
-  * **Task 3.1: Battle UI:**  
-    * Design and build the main game screen. This should include:  
-      * A large view for the plant image.  
-      * Four multiple-choice buttons for the answers.  
-      * A score display for the player.  
-      * A timer or indicator for the round.  
-  * **Task 3.2: Game Logic Implementation:**  
-    * Develop the logic for a 5-round game.  
-    * For each round:  
-      * Fetch a random plant from the database.  
-      * Populate the multiple-choice buttons: one correct answer and three incorrect answers (randomly selected from other plants).  
-      * Implement the scoring logic based on correct/incorrect answers.  
-  * **Task 3.3: Post-Round & Results Screens:**  
-    * Create the UI to display the correct answer and the "interesting fact" after each round.  
-    * Build the final results screen showing the player's score and a "You Win" or "You Lose" message.  
-  * **Task 3.4: Currency Awards:**  
-    * Implement the logic to award "Trophies" for winning a game. Update the user's trophyBalance in the database.
+**Tests:**
+- Project builds successfully
+- Dependencies resolve correctly
+- Core architecture unit tests pass
+- Design system components render correctly
+- Navigation flow works as expected
 
-#### **Phase 4: Matchmaking & Real-Time Multiplayer (Estimated Time: 4 Weeks)**
+## Phase 2: Core Features (Weeks 2-4)
 
-* **Goal:** Transform the single-player game into a real-time, two-player experience. This is the most complex phase and will require careful attention to real-time data synchronization.  
-* **Key Tasks for Junior Developer:**  
-  * **Task 4.1: Matchmaking Lobby:**  
-    * Create a "Find Game" screen that puts the player into a matchmaking queue.  
-    * Implement the logic to match two players from the queue. For now, matching can be random. Skill-based matching can be a future improvement.  
-  * **Task 4.2: Real-Time Game State:**  
-    * Create a "Battles" collection in the database to manage active games.  
-    * A battle document should store:  
-      * player1\_ID and player2\_ID  
-      * currentRound  
-      * player1\_score and player2\_score  
-      * player1\_answer and player2\_answer for the current round.  
-      * A list of plant IDs to be used in the battle.  
-  * **Task 4.3: Real-Time Synchronization:**  
-    * Use real-time listeners (e.g., Firestore's onSnapshot) to keep the game state synchronized between the two players' devices.  
-    * Update the game logic to handle the multiplayer scoring rules (e.g., who answered fastest).  
-  * **Task 4.4: Direct Challenges:**  
-    * Implement a system where a player can generate an invite code that another player can use to join their game directly.
+### Step 4: Authentication System
+**Tasks:**
+- Implement Cognito integration
+- Create user service
+- Set up OAuth 2.0
+- Implement JWT handling
+- Create user profile management
+- Set up data privacy measures
 
-#### **Phase 5: Economy, Shop & Polish (Estimated Time: 2.5 Weeks)**
+**Deliverables:**
+- Cognito user pool configuration
+- User service implementation
+- OAuth 2.0 flow documentation
+- JWT validation implementation
+- User profile management system
+- Data privacy documentation
 
-* **Goal:** Finalize the application by adding the in-game shop and refining the user experience.  
-* **Key Tasks for Junior Developer:**  
-  * **Task 5.1: Shop Data Model:**  
-    * Create a "ShopItems" collection in the database.  
-    * Define a data model for items, including itemName, itemType (e.g., skin, theme), price, and imageURL.  
-  * **Task 5.2: Shop UI:**  
-    * Build a browsable shop interface where users can see available items and their prices.  
-  * **Task 5.3: Purchase Logic:**  
-    * Implement the logic for a user to purchase an item. This should:  
-      * Check if the user has enough "Trophies".  
-      * Deduct the cost from the user's balance.  
-      * Add the purchased item to a list of owned items in the user's profile.  
-  * **Task 5.4: UI Polish & Bug Fixing:**  
-    * Review the entire application for UI/UX inconsistencies.  
-    * Add animations and transitions to make the app feel more responsive and engaging.  
-    * Conduct thorough testing to find and fix bugs before release.
+**Tests:**
+- Authentication flow unit tests
+- User service integration tests
+- OAuth 2.0 flow tests
+- JWT validation tests
+- Profile management tests
+- Data privacy compliance tests
+
+### Step 5: Game Logic Implementation
+**Tasks:**
+- Implement core game loop
+- Create matchmaking service
+- Implement ELO ranking
+- Set up WebSocket communication
+- Create game state management
+- Implement round management
+
+**Deliverables:**
+- Game loop implementation
+- Matchmaking service
+- ELO ranking system
+- WebSocket communication system
+- Game state management system
+- Round management implementation
+
+**Tests:**
+- Game loop unit tests
+- Matchmaking integration tests
+- ELO ranking algorithm tests
+- WebSocket communication tests
+- Game state management tests
+- Round management tests
+
+### Step 6: Plant Service Implementation
+**Tasks:**
+- Implement iNaturalist API integration
+- Create plant database structure
+- Set up plant data caching
+- Implement plant difficulty rating
+- Create plant image processing
+- Set up fallback mechanisms
+
+**Deliverables:**
+- iNaturalist API integration
+- Plant database schema
+- Caching implementation
+- Difficulty rating system
+- Image processing pipeline
+- Fallback mechanism implementation
+
+**Tests:**
+- API integration tests
+- Database operation tests
+- Cache hit/miss tests
+- Difficulty rating tests
+- Image processing tests
+- Fallback mechanism tests
+
+### Step 7: Economy System
+**Tasks:**
+- Implement currency system
+- Create shop functionality
+- Implement item management
+- Set up transaction system
+- Create inventory system
+- Implement economy balancing
+
+**Deliverables:**
+- Currency system implementation
+- Shop functionality
+- Item management system
+- Transaction system
+- Inventory system
+- Economy balancing documentation
+
+**Tests:**
+- Currency system tests
+- Shop functionality tests
+- Item management tests
+- Transaction system tests
+- Inventory system tests
+- Economy balance tests
+
+## Phase 3: iOS Development (Weeks 5-7)
+
+### Step 8: Core iOS Features
+**Tasks:**
+- Implement authentication flow
+- Create profile management
+- Set up data persistence
+- Implement network layer
+- Create WebSocket client
+- Set up state management
+
+**Deliverables:**
+- Authentication flow implementation
+- Profile management UI
+- Data persistence implementation
+- Network layer implementation
+- WebSocket client implementation
+- State management system
+
+**Tests:**
+- Authentication flow tests
+- Profile management tests
+- Data persistence tests
+- Network layer tests
+- WebSocket client tests
+- State management tests
+
+### Step 9: Game UI Implementation
+**Tasks:**
+- Create game screen
+- Implement plant display
+- Create answer selection
+- Implement round transitions
+- Create score display
+- Implement results screen
+
+**Deliverables:**
+- Game screen implementation
+- Plant display component
+- Answer selection UI
+- Round transition animations
+- Score display component
+- Results screen implementation
+
+**Tests:**
+- Game screen UI tests
+- Plant display tests
+- Answer selection tests
+- Round transition tests
+- Score display tests
+- Results screen tests
+
+### Step 10: Profile & Shop UI
+**Tasks:**
+- Create profile screen
+- Implement shop interface
+- Create inventory view
+- Implement settings screen
+- Create tutorial system
+- Implement help documentation
+
+**Deliverables:**
+- Profile screen implementation
+- Shop interface implementation
+- Inventory view implementation
+- Settings screen implementation
+- Tutorial system implementation
+- Help documentation
+
+**Tests:**
+- Profile screen tests
+- Shop interface tests
+- Inventory view tests
+- Settings screen tests
+- Tutorial system tests
+- Help documentation tests
+
+## Phase 4: Testing & Quality Assurance (Weeks 8-9)
+
+### Step 11: Backend Testing
+**Tasks:**
+- Execute API tests
+- Test WebSocket functionality
+- Perform load testing
+- Test security measures
+- Verify data integrity
+- Test error handling
+
+**Deliverables:**
+- API test suite
+- WebSocket test suite
+- Load test results
+- Security test report
+- Data integrity verification
+- Error handling documentation
+
+**Tests:**
+- API endpoint tests
+- WebSocket connection tests
+- Load test scenarios
+- Security penetration tests
+- Data integrity tests
+- Error handling tests
+
+### Step 12: iOS Testing
+**Tasks:**
+- Execute unit tests
+- Perform UI tests
+- Test offline functionality
+- Verify analytics
+- Test accessibility
+- Perform device testing
+
+**Deliverables:**
+- Unit test suite
+- UI test suite
+- Offline functionality tests
+- Analytics verification
+- Accessibility compliance report
+- Device compatibility report
+
+**Tests:**
+- Unit test coverage report
+- UI test scenarios
+- Offline mode tests
+- Analytics tracking tests
+- Accessibility compliance tests
+- Device compatibility tests
+
+## Phase 5: Launch Preparation (Weeks 10-11)
+
+### Step 13: Pre-launch
+**Tasks:**
+- Final security audit
+- Performance optimization
+- Server stress testing
+- Documentation review
+- Marketing materials
+- App Store submission
+
+**Deliverables:**
+- Security audit report
+- Performance optimization report
+- Stress test results
+- Updated documentation
+- Marketing materials
+- App Store submission package
+
+**Tests:**
+- Security compliance tests
+- Performance benchmark tests
+- Stress test scenarios
+- Documentation review checklist
+- Marketing material review
+- App Store submission checklist
+
+### Step 14: Launch
+**Tasks:**
+- Deploy to production
+- Monitor system performance
+- Address launch issues
+- Gather user feedback
+- Begin analytics review
+- Plan post-launch updates
+
+**Deliverables:**
+- Production deployment
+- Performance monitoring dashboard
+- Issue tracking system
+- User feedback collection
+- Analytics dashboard
+- Post-launch update plan
+
+**Tests:**
+- Production deployment verification
+- Performance monitoring tests
+- Issue tracking system tests
+- Feedback collection system tests
+- Analytics tracking tests
+- Update deployment tests
+
+## Success Criteria
+
+### Technical Criteria
+- All unit tests pass with >80% coverage
+- All integration tests pass
+- All UI tests pass
+- Performance benchmarks met
+- Security requirements met
+- Accessibility requirements met
+
+### Business Criteria
+- App Store approval received
+- Marketing materials ready
+- User documentation complete
+- Support system in place
+- Analytics tracking active
+- Feedback system operational
+
+## Quality Gates
+
+### Code Quality
+- Static code analysis passes
+- Code review completed
+- Documentation updated
+- Test coverage requirements met
+- Performance requirements met
+- Security requirements met
+
+### Release Quality
+- All tests pass
+- Performance benchmarks met
+- Security audit passed
+- Documentation complete
+- Marketing materials ready
+- Support system ready
+
+*End of Project Plan*

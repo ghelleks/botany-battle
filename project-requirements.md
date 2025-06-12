@@ -1,5 +1,3 @@
- 
-
 # **Software Requirements Document (SRD)**
 
 ## **Project: "Botany Battle" (Working Title)**
@@ -56,7 +54,7 @@ To create a fun, educational, and competitive game that connects plant lovers an
 
 #### **3.4. Plant Database**
 
-* The application will require a robust database of plants.  
+* **Primary Data Source:** The application will source its plant data directly from the **iNaturalist API**. 
 * Each plant entry must include:  
   * Common Name  
   * Scientific Name  
@@ -98,4 +96,156 @@ To create a fun, educational, and competitive game that connects plant lovers an
 * All in-game items and currency are earned through gameplay only.  
 * There will be no in-app purchases or advertisements.
 
-*End of Version 1.0*
+### **6. Technical Architecture & Infrastructure**
+
+#### **6.1. Backend Architecture**
+* The application will use a monolithic architecture with the following components:
+  * Express.js server with TypeScript
+  * WebSocket server for real-time gameplay
+  * PostgreSQL for data storage
+  * Redis for caching and real-time game state
+  * Simple file-based image storage (with CDN for production)
+* The backend will be containerized using Docker for easy deployment
+
+#### **6.2. Real-time Communication**
+* WebSocket protocol will be used for real-time game communication
+* Simple connection state management
+* Basic message queuing for high-load scenarios
+
+#### **6.3. Data Storage**
+* PostgreSQL for all persistent data
+* Redis for caching and real-time game state
+* Simple file system for image storage in development
+* CDN for image delivery in production
+
+### **7. Security Requirements**
+
+#### **7.1. Authentication & Authorization**
+* OAuth 2.0 implementation for third-party authentication
+* JWT-based session management
+* Basic rate limiting on API endpoints
+* Simple IP-based blocking for suspicious activity
+
+#### **7.2. Data Privacy**
+* GDPR compliance for all user data
+* Basic data retention policies
+* User data export and deletion capabilities
+* Privacy policy and terms of service documentation
+
+#### **7.3. API Security**
+* HTTPS for all communications
+* API key management for iNaturalist integration
+* Basic input validation
+* Regular security audits
+
+### **8. Testing Requirements**
+
+#### **8.1. Testing Strategy**
+* Unit testing with Jest
+* Integration testing for API endpoints
+* Basic end-to-end testing
+* Simple performance testing
+
+#### **8.2. Quality Assurance**
+* Basic CI/CD pipeline
+* Code coverage requirements (minimum 70%)
+* Regular security scanning
+* User acceptance testing process
+
+### **9. Error Handling & Edge Cases**
+
+#### **9.1. Network Handling**
+* Basic handling of network disconnections
+* Simple reconnection logic
+* Timeout handling for API calls
+* Basic offline mode capabilities
+
+#### **9.2. API Resilience**
+* Simple retry mechanism for external API calls
+* Basic fallback strategies for iNaturalist API failures
+* Simple data validation
+
+### **10. Analytics & Monitoring**
+
+#### **10.1. Performance Monitoring**
+* Basic service health monitoring
+* Simple performance metrics
+* Error tracking
+* Basic user analytics
+
+#### **10.2. Business Analytics**
+* Basic player engagement metrics
+* Simple matchmaking effectiveness tracking
+* Basic economy metrics
+* Simple user retention analysis
+
+### **11. Deployment & DevOps**
+
+#### **11.1. Deployment Strategy**
+* Simple deployment process
+* Basic environment management (dev, production)
+* Simple rollback procedures
+
+#### **11.2. Infrastructure**
+* Single cloud provider (AWS)
+* Basic infrastructure setup
+* Simple scaling policies
+* Basic backup procedures
+
+### **12. Game Design Details**
+
+#### **12.1. Matchmaking System**
+* Minimum player pool size: 1000 active players
+* Maximum matchmaking wait time: 30 seconds
+* Skill-based matchmaking algorithm
+* Handling of inactive players and AFK detection
+
+#### **12.2. Ranking System**
+* ELO-based ranking system
+* Seasonal rankings with rewards
+* Anti-smurfing measures
+* Rank decay for inactive players
+
+### **13. Documentation Requirements**
+
+#### **13.1. Technical Documentation**
+* API documentation (OpenAPI/Swagger)
+* Architecture documentation
+* Deployment procedures
+* Troubleshooting guides
+
+#### **13.2. User Documentation**
+* In-app tutorial
+* FAQ section
+* Plant identification guide
+* Community guidelines
+
+### **14. Localization & Internationalization**
+
+#### **14.1. Language Support**
+* Initial support for English
+* Future support for Spanish, French, German
+* Localized plant names and descriptions
+* Time zone handling
+
+#### **14.2. Cultural Considerations**
+* Region-specific plant variations
+* Cultural sensitivity in plant descriptions
+* Localized content moderation
+* Regional event scheduling
+
+### **15. Accessibility**
+
+#### **15.1. Accessibility Standards**
+* WCAG 2.1 AA compliance
+* Screen reader support
+* Keyboard navigation
+* Color contrast requirements
+
+#### **15.2. User Experience**
+* Alternative input methods
+* Adjustable text sizes
+* Motion sensitivity options
+* Audio descriptions for plant images
+
+*End of Version 1.0* 
