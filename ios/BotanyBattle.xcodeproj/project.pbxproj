@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		A1234567890123456789012A /* BotanyBattleApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890123456789012B /* BotanyBattleApp.swift */; };
 		A1234567890123456789012C /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890123456789012D /* ContentView.swift */; };
+		A12345678901234567890142 /* SimpleContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A12345678901234567890143 /* SimpleContentView.swift */; };
 		A1234567890123456789012E /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A1234567890123456789012F /* Assets.xcassets */; };
 		A12345678901234567890130 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A12345678901234567890131 /* Preview Assets.xcassets */; };
 /* End PBXBuildFile section */
@@ -17,6 +18,7 @@
 		A12345678901234567890132 /* BotanyBattle.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BotanyBattle.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A1234567890123456789012B /* BotanyBattleApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BotanyBattleApp.swift; sourceTree = "<group>"; };
 		A1234567890123456789012D /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		A12345678901234567890143 /* SimpleContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimpleContentView.swift; sourceTree = "<group>"; };
 		A1234567890123456789012F /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		A12345678901234567890131 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -45,6 +47,7 @@
 			children = (
 				A1234567890123456789012B /* BotanyBattleApp.swift */,
 				A1234567890123456789012D /* ContentView.swift */,
+				A12345678901234567890143 /* SimpleContentView.swift */,
 				A1234567890123456789012F /* Assets.xcassets */,
 				A12345678901234567890137 /* Preview Content */,
 			);
@@ -138,6 +141,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A1234567890123456789012C /* ContentView.swift in Sources */,
+				A12345678901234567890142 /* SimpleContentView.swift in Sources */,
 				A1234567890123456789012A /* BotanyBattleApp.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
