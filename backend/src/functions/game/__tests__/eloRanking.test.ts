@@ -13,7 +13,7 @@ describe('ELO Ranking System', () => {
   describe('calculateELOChange', () => {
     it('should calculate ELO change for a win against equal opponent', () => {
       const change = calculateELOChange(1000, 1000, 1, 10);
-      expect(change).toBe(16); // K-factor 32 * (1 - 0.5) = 16
+      expect(change).toBe(20); // K-factor 40 * (1 - 0.5) = 20 for new players
     });
 
     it('should calculate larger change for upset win', () => {

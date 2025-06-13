@@ -30,7 +30,7 @@ jest.mock('redis', () => ({
 }));
 
 // Mock ELO ranking functions
-jest.mock('../game/eloRanking', () => ({
+jest.mock('../../game/eloRanking', () => ({
   getRankFromRating: jest.fn((rating) => {
     if (rating >= 1200) return 'Green Thumb';
     if (rating >= 1000) return 'Sprout';

@@ -1,9 +1,21 @@
 import { APIGatewayProxyEvent } from "aws-lambda";
 import { handler } from "../handler";
 
+// Mock Cognito at module level
+jest.mock("@aws-sdk/client-cognito-identity-provider", () => ({
+  CognitoIdentityProviderClient: jest.fn().mockImplementation(() => ({
+    send: jest.fn().mockResolvedValue({
+      AuthenticationResult: {
+        IdToken: "mock-token",
+      },
+    }),
+  })),
+  InitiateAuthCommand: jest.fn(),
+}));
+
 describe("Auth Handler", () => {
   const mockEvent = (body: any): APIGatewayProxyEvent => ({
-    body: JSON.stringify(body),
+    body: body ? JSON.stringify(body) : null,
     headers: {},
     multiValueHeaders: {},
     httpMethod: "POST",
@@ -71,18 +83,6 @@ describe("Auth Handler", () => {
       username: "testuser",
       password: "testpass",
     });
-
-    // Mock Cognito response
-    jest.mock("@aws-sdk/client-cognito-identity-provider", () => ({
-      CognitoIdentityProviderClient: jest.fn().mockImplementation(() => ({
-        send: jest.fn().mockResolvedValue({
-          AuthenticationResult: {
-            IdToken: "mock-token",
-          },
-        }),
-      })),
-      InitiateAuthCommand: jest.fn(),
-    }));
 
     const response = await handler(event);
 

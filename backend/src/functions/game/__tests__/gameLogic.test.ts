@@ -36,7 +36,7 @@ jest.mock('../eloRanking', () => ({
 }));
 
 // Mock user service
-jest.mock('../user/handler', () => ({
+jest.mock('../../user/handler', () => ({
   updateUserELO: jest.fn()
 }));
 
