@@ -2,6 +2,16 @@
 
 A real-time multiplayer mobile game where players battle to identify plant species. Test your botanical knowledge in head-to-head matches, earn Trophies, and customize your profile with unique items!
 
+## 📱 Screenshots
+
+<div align="center">
+  <img src="docs/screenshots/auth-screen.png" alt="Authentication Screen" width="250"/>
+  <img src="docs/screenshots/game-screen.png" alt="Game Screen" width="250"/>
+  <img src="docs/screenshots/profile-screen.png" alt="Profile Screen" width="250"/>
+</div>
+
+*Welcome screen with authentication options, main game arena with difficulty selection, and user profile with stats and achievements.*
+
 ## 🎮 Features
 
 - Real-time multiplayer battles
