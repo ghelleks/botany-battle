@@ -1,2 +1,9 @@
 # Build artifacts
 .build
+*.backup
+*.xcuserstate
+
+# Xcode user-specific files
+*.xcuserstate
+*.xcworkspace/xcuserdata/
+*.xcodeproj/xcuserdata/
