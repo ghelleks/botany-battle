@@ -23,7 +23,7 @@ struct ProfileFeature {
             }
         }
         
-        struct LeaderboardEntry: Equatable, Identifiable {
+        struct LeaderboardEntry: Equatable, Identifiable, Codable {
             let id: String
             let rank: Int
             let username: String
@@ -34,7 +34,7 @@ struct ProfileFeature {
             let isCurrentUser: Bool
         }
         
-        struct Achievement: Equatable, Identifiable {
+        struct Achievement: Equatable, Identifiable, Codable {
             let id: String
             let title: String
             let description: String
@@ -43,7 +43,7 @@ struct ProfileFeature {
             let unlockedAt: Date?
             let progress: Progress?
             
-            struct Progress: Equatable {
+            struct Progress: Equatable, Codable {
                 let current: Int
                 let total: Int
                 let percentage: Double

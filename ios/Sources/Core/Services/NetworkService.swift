@@ -10,6 +10,13 @@ protocol NetworkServiceProtocol {
         headers: HTTPHeaders?
     ) async throws -> T
     
+    func request(
+        _ endpoint: APIEndpoint,
+        method: HTTPMethod,
+        parameters: [String: Any]?,
+        headers: HTTPHeaders?
+    ) async throws
+    
     func upload<T: Codable>(
         _ endpoint: APIEndpoint,
         data: Data,
@@ -47,6 +54,27 @@ final class NetworkService: NetworkServiceProtocol {
         case .success(let value):
             return value
         case .failure(let error):
+            throw NetworkError.requestFailed(error)
+        }
+    }
+    
+    func request(
+        _ endpoint: APIEndpoint,
+        method: HTTPMethod = .get,
+        parameters: [String: Any]? = nil,
+        headers: HTTPHeaders? = nil
+    ) async throws {
+        let url = baseURL + endpoint.path
+        
+        let response = await session.request(
+            url,
+            method: method,
+            parameters: parameters,
+            encoding: method == .get ? URLEncoding.default : JSONEncoding.default,
+            headers: headers
+        ).response
+        
+        if let error = response.error {
             throw NetworkError.requestFailed(error)
         }
     }

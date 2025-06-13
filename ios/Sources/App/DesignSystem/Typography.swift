@@ -1,5 +1,6 @@
 import SwiftUI
 
+@available(iOS 14.0, macOS 11.0, *)
 extension Font {
     static let botanicalLargeTitle = Font.custom("Avenir-Heavy", size: 34, relativeTo: .largeTitle)
     static let botanicalTitle = Font.custom("Avenir-Medium", size: 28, relativeTo: .title)

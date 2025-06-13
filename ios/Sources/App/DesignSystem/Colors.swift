@@ -1,4 +1,7 @@
 import SwiftUI
+#if canImport(UIKit)
+import UIKit
+#endif
 
 extension Color {
     static let botanicalGreen = Color(red: 0.2, green: 0.6, blue: 0.2)
