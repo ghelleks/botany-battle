@@ -12,11 +12,13 @@ Serverless backend for the Botany Battle game, built with AWS Lambda, API Gatewa
 ## Setup
 
 1. Install dependencies:
+
    ```bash
    npm install
    ```
 
 2. Configure environment variables:
+
    ```bash
    cp .env.example .env
    # Edit .env with your configuration
@@ -32,26 +34,29 @@ Serverless backend for the Botany Battle game, built with AWS Lambda, API Gatewa
 ### Local Development
 
 1. Start local development server:
+
    ```bash
    serverless offline
    ```
 
 2. Run tests:
+
    ```bash
    # Run all tests
    npm test
-   
+
    # Run unit tests
    npm run test:unit
-   
+
    # Run integration tests
    npm run test:integration
-   
+
    # Run load tests
    npm run test:load
    ```
 
 3. Lint code:
+
    ```bash
    npm run lint
    ```
@@ -83,6 +88,7 @@ src/
 ### Deployment
 
 1. Deploy to development:
+
    ```bash
    npm run deploy:dev
    ```
@@ -146,4 +152,4 @@ src/
 
 ## License
 
-MIT 
+MIT

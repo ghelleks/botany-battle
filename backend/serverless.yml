@@ -7,6 +7,21 @@ provider:
   runtime: nodejs18.x
   stage: ${opt:stage, 'dev'}
   region: ${opt:region, 'us-west-2'}
+  vpc:
+    securityGroupIds:
+      - !Ref LambdaSecurityGroup
+    subnetIds:
+      - !Ref GameCacheSubnet1
+      - !Ref GameCacheSubnet2
+  logs:
+    restApi:
+      level: INFO
+      executionLogging: true
+    websocket:
+      level: INFO
+  tracing:
+    lambda: true
+    apiGateway: true
   environment:
     STAGE: ${self:provider.stage}
     REGION: ${self:provider.region}
@@ -16,6 +31,72 @@ provider:
     S3_BUCKET: ${self:service}-${self:provider.stage}
     COGNITO_USER_POOL_ID: ${self:custom.cognito.userPoolId}
     COGNITO_CLIENT_ID: ${self:custom.cognito.clientId}
+    LOG_LEVEL: ${opt:logLevel, 'INFO'}
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - dynamodb:Query
+            - dynamodb:Scan
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+          Resource:
+            - "arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:provider.environment.DYNAMODB_TABLE}"
+            - "arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:provider.environment.DYNAMODB_TABLE}/index/*"
+        - Effect: Allow
+          Action:
+            - s3:GetObject
+            - s3:PutObject
+            - s3:DeleteObject
+            - s3:ListBucket
+          Resource:
+            - "arn:aws:s3:::${self:provider.environment.S3_BUCKET}"
+            - "arn:aws:s3:::${self:provider.environment.S3_BUCKET}/*"
+        - Effect: Allow
+          Action:
+            - cognito-idp:AdminGetUser
+            - cognito-idp:AdminCreateUser
+            - cognito-idp:AdminUpdateUserAttributes
+            - cognito-idp:AdminDeleteUser
+            - cognito-idp:AdminListGroupsForUser
+          Resource:
+            - "arn:aws:cognito-idp:${aws:region}:${aws:accountId}:userpool/${self:custom.cognito.userPoolId}"
+        - Effect: Allow
+          Action:
+            - elasticache:DescribeServerlessCaches
+            - elasticache:Connect
+          Resource:
+            - "arn:aws:elasticache:${aws:region}:${aws:accountId}:serverlesscache:${self:service}-${self:provider.stage}-cache"
+        - Effect: Allow
+          Action:
+            - execute-api:ManageConnections
+          Resource:
+            - "arn:aws:execute-api:${aws:region}:${aws:accountId}:*"
+        - Effect: Allow
+          Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+          Resource:
+            - "arn:aws:logs:${aws:region}:${aws:accountId}:*"
+        - Effect: Allow
+          Action:
+            - ec2:CreateNetworkInterface
+            - ec2:DescribeNetworkInterfaces
+            - ec2:DeleteNetworkInterface
+          Resource: "*"
+        - Effect: Allow
+          Action:
+            - xray:PutTraceSegments
+            - xray:PutTelemetryRecords
+          Resource: "*"
+        - Effect: Allow
+          Action:
+            - cloudwatch:PutMetricData
+          Resource: "*"
 
 custom:
   esbuild:
@@ -29,12 +110,11 @@ custom:
     host: ${self:custom.redis.${self:provider.stage}.host}
     port: ${self:custom.redis.${self:provider.stage}.port}
     dev:
-      host: localhost
-      port: 6379
+      host: !GetAtt GameCache.RedisEndpoint.Address
+      port: !GetAtt GameCache.RedisEndpoint.Port
     prod:
-      host: placeholder-prod-redis-host
-      port: 6379
-      prodEndpoint: placeholder-prod-redis-endpoint
+      host: !GetAtt GameCache.RedisEndpoint.Address
+      port: !GetAtt GameCache.RedisEndpoint.Port
   cognito:
     userPoolId: ${self:custom.cognito.${self:provider.stage}.userPoolId}
     clientId: ${self:custom.cognito.${self:provider.stage}.clientId}
@@ -63,6 +143,11 @@ functions:
           path: /game
           method: post
           cors: true
+          private: true
+          authorizer:
+            name: cognitoAuthorizer
+            type: COGNITO_USER_POOLS
+            arn: arn:aws:cognito-idp:${self:provider.region}:${aws:accountId}:userpool/${self:custom.cognito.userPoolId}
       - websocket:
           route: $connect
       - websocket:
@@ -79,6 +164,11 @@ functions:
           path: /plant
           method: get
           cors: true
+          private: true
+          authorizer:
+            name: cognitoAuthorizer
+            type: COGNITO_USER_POOLS
+            arn: arn:aws:cognito-idp:${self:provider.region}:${aws:accountId}:userpool/${self:custom.cognito.userPoolId}
     environment:
       FUNCTION_NAME: plant
 
@@ -89,6 +179,11 @@ functions:
           path: /shop
           method: post
           cors: true
+          private: true
+          authorizer:
+            name: cognitoAuthorizer
+            type: COGNITO_USER_POOLS
+            arn: arn:aws:cognito-idp:${self:provider.region}:${aws:accountId}:userpool/${self:custom.cognito.userPoolId}
     environment:
       FUNCTION_NAME: shop
 
@@ -125,6 +220,155 @@ resources:
               AllowedMethods: [GET, PUT, POST, DELETE]
               AllowedOrigins: ['*']
               MaxAge: 3000
+
+    GameCacheSubnetGroup:
+      Type: AWS::ElastiCache::SubnetGroup
+      Properties:
+        Description: Subnet group for botany battle cache
+        SubnetIds:
+          - !Ref GameCacheSubnet1
+          - !Ref GameCacheSubnet2
+
+    GameCacheSecurityGroup:
+      Type: AWS::EC2::SecurityGroup
+      Properties:
+        GroupDescription: Security group for botany battle cache
+        VpcId: !Ref GameVPC
+        SecurityGroupIngress:
+          - IpProtocol: tcp
+            FromPort: 6379
+            ToPort: 6379
+            SourceSecurityGroupId: !Ref LambdaSecurityGroup
+
+    GameCache:
+      Type: AWS::ElastiCache::ServerlessCache
+      Properties:
+        ServerlessCacheName: ${self:service}-${self:provider.stage}-cache
+        Engine: redis
+        MajorEngineVersion: 7
+        CacheUsageLimits:
+          DataStorage:
+            Maximum: 5
+            Unit: gb
+          ECPUPerSecond:
+            Maximum: 5000
+        SecurityGroupIds:
+          - !Ref GameCacheSecurityGroup
+        SubnetIds:
+          - !Ref GameCacheSubnet1
+          - !Ref GameCacheSubnet2
+
+    GameVPC:
+      Type: AWS::EC2::VPC
+      Properties:
+        CidrBlock: 10.0.0.0/16
+        EnableDnsHostnames: true
+        EnableDnsSupport: true
+        Tags:
+          - Key: Name
+            Value: ${self:service}-${self:provider.stage}-vpc
+
+    GameCacheSubnet1:
+      Type: AWS::EC2::Subnet
+      Properties:
+        VpcId: !Ref GameVPC
+        CidrBlock: 10.0.1.0/24
+        AvailabilityZone: ${self:provider.region}a
+        Tags:
+          - Key: Name
+            Value: ${self:service}-${self:provider.stage}-cache-subnet-1
+
+    GameCacheSubnet2:
+      Type: AWS::EC2::Subnet
+      Properties:
+        VpcId: !Ref GameVPC
+        CidrBlock: 10.0.2.0/24
+        AvailabilityZone: ${self:provider.region}b
+        Tags:
+          - Key: Name
+            Value: ${self:service}-${self:provider.stage}-cache-subnet-2
+
+    LambdaSecurityGroup:
+      Type: AWS::EC2::SecurityGroup
+      Properties:
+        GroupDescription: Security group for Lambda functions
+        VpcId: !Ref GameVPC
+        SecurityGroupEgress:
+          - IpProtocol: -1
+            CidrIp: 0.0.0.0/0
+
+    ApiGatewayApiKey:
+      Type: AWS::ApiGateway::ApiKey
+      Properties:
+        Name: ${self:service}-${self:provider.stage}-api-key
+        Description: API Key for ${self:service} ${self:provider.stage}
+        Enabled: true
+
+    ApiGatewayUsagePlan:
+      Type: AWS::ApiGateway::UsagePlan
+      Properties:
+        UsagePlanName: ${self:service}-${self:provider.stage}-usage-plan
+        Description: Usage plan for ${self:service} ${self:provider.stage}
+        Throttle:
+          BurstLimit: 500
+          RateLimit: 100
+        Quota:
+          Limit: 10000
+          Period: DAY
+        ApiStages:
+          - ApiId: !Ref RestApiApigEvent
+            Stage: ${self:provider.stage}
+
+    ApiGatewayUsagePlanKey:
+      Type: AWS::ApiGateway::UsagePlanKey
+      Properties:
+        KeyId: !Ref ApiGatewayApiKey
+        KeyType: API_KEY
+        UsagePlanId: !Ref ApiGatewayUsagePlan
+
+    ErrorAlarm:
+      Type: AWS::CloudWatch::Alarm
+      Properties:
+        AlarmName: ${self:service}-${self:provider.stage}-errors
+        AlarmDescription: High error rate detected
+        MetricName: Errors
+        Namespace: AWS/Lambda
+        Statistic: Sum
+        Period: 300
+        EvaluationPeriods: 2
+        Threshold: 10
+        ComparisonOperator: GreaterThanThreshold
+        TreatMissingData: notBreaching
+        AlarmActions:
+          - !Ref ErrorTopic
+
+    ThrottleAlarm:
+      Type: AWS::CloudWatch::Alarm
+      Properties:
+        AlarmName: ${self:service}-${self:provider.stage}-throttles
+        AlarmDescription: High throttle rate detected
+        MetricName: Throttles
+        Namespace: AWS/Lambda
+        Statistic: Sum
+        Period: 300
+        EvaluationPeriods: 1
+        Threshold: 5
+        ComparisonOperator: GreaterThanThreshold
+        TreatMissingData: notBreaching
+        AlarmActions:
+          - !Ref ErrorTopic
+
+    ErrorTopic:
+      Type: AWS::SNS::Topic
+      Properties:
+        TopicName: ${self:service}-${self:provider.stage}-errors
+        DisplayName: Botany Battle Error Notifications
+
+    CloudWatchLogGroup:
+      Type: AWS::Logs::LogGroup
+      Properties:
+        LogGroupName: /aws/lambda/${self:service}-${self:provider.stage}
+        RetentionInDays: 14
 
 plugins:
   - serverless-esbuild

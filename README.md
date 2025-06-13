@@ -204,25 +204,15 @@ xcodebuild test -scheme BotanyBattleUITests -destination 'platform=iOS Simulator
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 👥 Team
-
-- Project Manager: [Name]
-- Backend Developer: [Name]
-- iOS Developer: [Name]
-- QA Engineer: [Name]
-- UI/UX Designer: [Name]
-
 ## 🙏 Acknowledgments
 
 - iNaturalist API for plant data
 - All contributors and supporters
 - The plant identification community
 
-## 📞 Support
-
-For support, email support@botanybattle.com or join our Discord community.
-
 ## 🎯 Project Status
+
+See TODO.md for details.
 
 ### Current Phase
 - Phase 1: Project Setup
@@ -296,28 +286,9 @@ For support, email support@botanybattle.com or join our Discord community.
 - Fastlane
 
 ### Recommended Tools
-- Visual Studio Code
-- Postman
-- Charles Proxy
-- Instruments
-- GitHub Desktop
-
-## 📈 Analytics
-
-### User Metrics
-- Daily active users
-- Match completion rate
-- Shop engagement
-- User retention
-- Feature usage
-
-### Technical Metrics
-- API response times
-- Error rates
-- Memory usage
-- Battery impact
-- Network usage
+- Cursor.ai
+- Claude Code
 
 ---
 
-*Built with ❤️ by the Botany Battle Team* 
+*Built with ❤️ by Soren🐻 and Gunnar🐰* 

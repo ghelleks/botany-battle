@@ -1,0 +1,57 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "properties": {
+    "username": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 50,
+      "pattern": "^[a-zA-Z0-9_-]+$"
+    },
+    "password": {
+      "type": "string",
+      "minLength": 8,
+      "maxLength": 128
+    },
+    "email": {
+      "type": "string",
+      "format": "email",
+      "maxLength": 254
+    },
+    "action": {
+      "type": "string",
+      "enum": ["login", "register", "refresh", "logout"]
+    },
+    "refreshToken": {
+      "type": "string"
+    }
+  },
+  "required": ["action"],
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": { "action": { "const": "login" } }
+      },
+      "then": {
+        "required": ["username", "password"]
+      }
+    },
+    {
+      "if": {
+        "properties": { "action": { "const": "register" } }
+      },
+      "then": {
+        "required": ["username", "password", "email"]
+      }
+    },
+    {
+      "if": {
+        "properties": { "action": { "const": "refresh" } }
+      },
+      "then": {
+        "required": ["refreshToken"]
+      }
+    }
+  ]
+}

@@ -1,5 +1,8 @@
-import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
-import { CognitoIdentityProviderClient, InitiateAuthCommand } from '@aws-sdk/client-cognito-identity-provider';
+import { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
+import {
+  CognitoIdentityProviderClient,
+  InitiateAuthCommand,
+} from "@aws-sdk/client-cognito-identity-provider";
 
 const cognitoClient = new CognitoIdentityProviderClient({});
 
@@ -8,15 +11,17 @@ interface AuthRequest {
   password: string;
 }
 
-export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
+export const handler = async (
+  event: APIGatewayProxyEvent,
+): Promise<APIGatewayProxyResult> => {
   try {
     if (!event.body) {
       return {
         statusCode: 400,
-        body: JSON.stringify({ message: 'Request body is required' }),
+        body: JSON.stringify({ message: "Request body is required" }),
         headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*",
         },
       };
     }
@@ -26,16 +31,16 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     if (!username || !password) {
       return {
         statusCode: 400,
-        body: JSON.stringify({ message: 'Username and password are required' }),
+        body: JSON.stringify({ message: "Username and password are required" }),
         headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*",
         },
       };
     }
 
     const command = new InitiateAuthCommand({
-      AuthFlow: 'USER_PASSWORD_AUTH',
+      AuthFlow: "USER_PASSWORD_AUTH",
       ClientId: process.env.COGNITO_CLIENT_ID,
       AuthParameters: {
         USERNAME: username,
@@ -48,27 +53,27 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     return {
       statusCode: 200,
       body: JSON.stringify({
-        message: 'Authentication successful',
+        message: "Authentication successful",
         token: response.AuthenticationResult?.IdToken,
       }),
       headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
       },
     };
   } catch (error) {
-    console.error('Authentication error:', error);
-    
+    console.error("Authentication error:", error);
+
     return {
       statusCode: 500,
       body: JSON.stringify({
-        message: 'Authentication failed',
-        error: error instanceof Error ? error.message : 'Unknown error',
+        message: "Authentication failed",
+        error: error instanceof Error ? error.message : "Unknown error",
       }),
       headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
       },
     };
   }
-}; 
+};
