@@ -7,6 +7,7 @@ import {
   TransactWriteItemsCommand,
 } from "@aws-sdk/client-dynamodb";
 import Redis from "ioredis";
+import { createEconomyBalancer } from "../../utils/economyBalancer";
 
 const dynamodb = new DynamoDBClient({ region: process.env.REGION });
 const redis = new Redis({
@@ -15,6 +16,7 @@ const redis = new Redis({
   retryDelayOnFailover: 100,
   maxRetriesPerRequest: 3,
 });
+const economyBalancer = createEconomyBalancer();
 
 interface ShopItem {
   id: string;
@@ -90,6 +92,10 @@ export const handler = async (
         );
       case "getTransactions":
         return await getTransactionHistory(userId);
+      case "validateEconomy":
+        return await validatePlayerEconomy(userId);
+      case "getPricing":
+        return await getDynamicPricing();
       default:
         return {
           statusCode: 400,
@@ -566,4 +572,93 @@ async function saveTransaction(transaction: Transaction): Promise<void> {
       },
     }),
   );
+}
+
+async function validatePlayerEconomy(
+  userId: string,
+): Promise<APIGatewayProxyResult> {
+  try {
+    const inventory = await getUserInventoryData(userId);
+    
+    const mockPlayerStats = {
+      gamesPlayed: 50,
+      gamesWon: 30,
+    };
+
+    const validation = economyBalancer.validatePlayerEconomy(
+      inventory.coins,
+      inventory.gems,
+      mockPlayerStats.gamesPlayed,
+      mockPlayerStats.gamesWon,
+    );
+
+    return {
+      statusCode: 200,
+      headers: {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+      },
+      body: JSON.stringify({
+        validation,
+        currentBalance: {
+          coins: inventory.coins,
+          gems: inventory.gems,
+        },
+      }),
+    };
+  } catch (error) {
+    console.error("Economy validation error:", error);
+    return {
+      statusCode: 500,
+      headers: {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+      },
+      body: JSON.stringify({ error: "Validation failed" }),
+    };
+  }
+}
+
+async function getDynamicPricing(): Promise<APIGatewayProxyResult> {
+  try {
+    const baseItems = await getShopItemsData();
+    const itemsWithDynamicPricing = baseItems.map((item) => {
+      const mockPurchaseVolume = Math.floor(Math.random() * 200);
+      const adjustedPrice = economyBalancer.adjustDynamicPricing(
+        item.id,
+        item.price,
+        mockPurchaseVolume,
+        24,
+      );
+
+      return {
+        ...item,
+        originalPrice: item.price,
+        currentPrice: adjustedPrice,
+        demandLevel: mockPurchaseVolume > 150 ? "high" : mockPurchaseVolume > 75 ? "medium" : "low",
+      };
+    });
+
+    return {
+      statusCode: 200,
+      headers: {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+      },
+      body: JSON.stringify({
+        items: itemsWithDynamicPricing,
+        priceUpdateTime: new Date().toISOString(),
+      }),
+    };
+  } catch (error) {
+    console.error("Dynamic pricing error:", error);
+    return {
+      statusCode: 500,
+      headers: {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+      },
+      body: JSON.stringify({ error: "Failed to get pricing" }),
+    };
+  }
 }
