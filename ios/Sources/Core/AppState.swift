@@ -9,6 +9,9 @@ struct AppFeature {
         var game = GameFeature.State()
         var profile = ProfileFeature.State()
         var shop = ShopFeature.State()
+        var settings = SettingsFeature.State()
+        var tutorial = TutorialFeature.State()
+        var help = HelpFeature.State()
         var isAuthenticated = false
         var currentTab: Tab = .game
         
@@ -16,6 +19,7 @@ struct AppFeature {
             case game
             case profile
             case shop
+            case settings
         }
     }
     
@@ -24,6 +28,9 @@ struct AppFeature {
         case game(GameFeature.Action)
         case profile(ProfileFeature.Action)
         case shop(ShopFeature.Action)
+        case settings(SettingsFeature.Action)
+        case tutorial(TutorialFeature.Action)
+        case help(HelpFeature.Action)
         case tabChanged(State.Tab)
         case onAppear
     }
@@ -45,6 +52,18 @@ struct AppFeature {
             ShopFeature()
         }
         
+        Scope(state: \.settings, action: \.settings) {
+            SettingsFeature()
+        }
+        
+        Scope(state: \.tutorial, action: \.tutorial) {
+            TutorialFeature()
+        }
+        
+        Scope(state: \.help, action: \.help) {
+            HelpFeature()
+        }
+        
         Reduce { state, action in
             switch action {
             case .auth(.loginSuccess):
@@ -60,11 +79,14 @@ struct AppFeature {
                 return .none
                 
             case .onAppear:
-                return .run { send in
-                    await send(.auth(.checkAuthStatus))
-                }
+                return .concatenate(
+                    .run { send in
+                        await send(.auth(.checkAuthStatus))
+                    },
+                    .send(.tutorial(.checkTutorialStatus))
+                )
                 
-            case .auth, .game, .profile, .shop:
+            case .auth, .game, .profile, .shop, .settings, .tutorial, .help:
                 return .none
             }
         }
