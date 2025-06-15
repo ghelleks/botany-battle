@@ -3,9 +3,9 @@ import Foundation
 struct User: Codable, Equatable, Identifiable {
     let id: String
     let username: String
-    let email: String
+    let email: String?
     let displayName: String?
-    let avatarURL: String?
+    let avatarURL: URL?
     let createdAt: Date
     let stats: UserStats
     let currency: Currency

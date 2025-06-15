@@ -1,7 +1,6 @@
 import Foundation
 import ComposableArchitecture
-import Amplify
-import AWSCognitoAuthPlugin
+import GameKit
 
 @Reducer
 struct AuthFeature {
@@ -11,90 +10,49 @@ struct AuthFeature {
         var isLoading = false
         var currentUser: User?
         var error: String?
-        var loginForm = LoginForm()
-        var signupForm = SignupForm()
-        
-        struct LoginForm: Equatable {
-            var username = ""
-            var password = ""
-            var isValid: Bool {
-                !username.isEmpty && !password.isEmpty
-            }
-        }
-        
-        struct SignupForm: Equatable {
-            var username = ""
-            var email = ""
-            var password = ""
-            var confirmPassword = ""
-            var displayName = ""
-            
-            var isValid: Bool {
-                !username.isEmpty &&
-                !email.isEmpty &&
-                !password.isEmpty &&
-                password == confirmPassword &&
-                password.count >= 8
-            }
-        }
+        var showingGameCenterLogin = false
     }
     
     enum Action {
         case checkAuthStatus
-        case login(username: String, password: String)
-        case signup(username: String, email: String, password: String, displayName: String)
+        case authenticateWithGameCenter
         case logout
         case loginSuccess(User)
-        case signupSuccess
         case logoutSuccess
         case authCheckComplete
         case authError(String)
         case clearError
-        case updateLoginForm(username: String?, password: String?)
-        case updateSignupForm(username: String?, email: String?, password: String?, confirmPassword: String?, displayName: String?)
+        case showGameCenterLogin
+        case hideGameCenterLogin
     }
     
-    @Dependency(\.authService) var authService
+    @Dependency(\.gameCenterService) var gameCenterService
     
     var body: some ReducerOf<Self> {
         Reduce { state, action in
             switch action {
             case .checkAuthStatus:
                 state.isLoading = true
-                return .run { [state] send in
+                return .run { send in
                     do {
-                        let user = try await authService.getCurrentUser()
-                        await send(.loginSuccess(user))
+                        if gameCenterService.isAuthenticated() {
+                            let user = try await gameCenterService.getCurrentUser()
+                            await send(.loginSuccess(user))
+                        } else {
+                            await send(.authCheckComplete)
+                        }
                     } catch {
-                        // If user is not authenticated, this is not an error - just set loading to false
                         await send(.authCheckComplete)
                     }
                 }
                 
-            case .login(let username, let password):
+            case .authenticateWithGameCenter:
                 state.isLoading = true
                 state.error = nil
                 return .run { send in
                     do {
-                        let user = try await authService.signIn(username: username, password: password)
+                        let user = try await gameCenterService.authenticatePlayer()
                         await send(.loginSuccess(user))
-                    } catch {
-                        await send(.authError(error.localizedDescription))
-                    }
-                }
-                
-            case .signup(let username, let email, let password, let displayName):
-                state.isLoading = true
-                state.error = nil
-                return .run { send in
-                    do {
-                        try await authService.signUp(
-                            username: username,
-                            email: email,
-                            password: password,
-                            displayName: displayName
-                        )
-                        await send(.signupSuccess)
                     } catch {
                         await send(.authError(error.localizedDescription))
                     }
@@ -104,7 +62,7 @@ struct AuthFeature {
                 state.isLoading = true
                 return .run { send in
                     do {
-                        try await authService.signOut()
+                        try await gameCenterService.signOut()
                         await send(.logoutSuccess)
                     } catch {
                         await send(.authError(error.localizedDescription))
@@ -116,11 +74,7 @@ struct AuthFeature {
                 state.isAuthenticated = true
                 state.currentUser = user
                 state.error = nil
-                return .none
-                
-            case .signupSuccess:
-                state.isLoading = false
-                state.error = nil
+                state.showingGameCenterLogin = false
                 return .none
                 
             case .logoutSuccess:
@@ -144,31 +98,12 @@ struct AuthFeature {
                 state.error = nil
                 return .none
                 
-            case .updateLoginForm(let username, let password):
-                if let username = username {
-                    state.loginForm.username = username
-                }
-                if let password = password {
-                    state.loginForm.password = password
-                }
+            case .showGameCenterLogin:
+                state.showingGameCenterLogin = true
                 return .none
                 
-            case .updateSignupForm(let username, let email, let password, let confirmPassword, let displayName):
-                if let username = username {
-                    state.signupForm.username = username
-                }
-                if let email = email {
-                    state.signupForm.email = email
-                }
-                if let password = password {
-                    state.signupForm.password = password
-                }
-                if let confirmPassword = confirmPassword {
-                    state.signupForm.confirmPassword = confirmPassword
-                }
-                if let displayName = displayName {
-                    state.signupForm.displayName = displayName
-                }
+            case .hideGameCenterLogin:
+                state.showingGameCenterLogin = false
                 return .none
             }
         }

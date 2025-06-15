@@ -15,7 +15,6 @@ let package = Package(
     dependencies: [
         .package(url: "https://github.com/Alamofire/Alamofire.git", from: "5.8.0"),
         .package(url: "https://github.com/daltoniam/Starscream.git", from: "4.0.0"),
-        .package(url: "https://github.com/aws-amplify/amplify-swift", from: "2.0.0"),
         .package(url: "https://github.com/pointfreeco/swift-composable-architecture", from: "1.0.0"),
         .package(url: "https://github.com/pointfreeco/swift-dependencies", from: "1.0.0"),
         .package(url: "https://github.com/SDWebImage/SDWebImageSwiftUI.git", from: "2.2.0")
@@ -26,8 +25,6 @@ let package = Package(
             dependencies: [
                 "Alamofire",
                 "Starscream",
-                .product(name: "Amplify", package: "amplify-swift"),
-                .product(name: "AWSCognitoAuthPlugin", package: "amplify-swift"),
                 .product(name: "ComposableArchitecture", package: "swift-composable-architecture"),
                 .product(name: "Dependencies", package: "swift-dependencies"),
                 .product(name: "SDWebImageSwiftUI", package: "SDWebImageSwiftUI")

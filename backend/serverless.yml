@@ -29,8 +29,6 @@ provider:
     REDIS_HOST: ${self:custom.redis.host}
     REDIS_PORT: ${self:custom.redis.port}
     S3_BUCKET: ${self:service}-${self:provider.stage}
-    COGNITO_USER_POOL_ID: ${self:custom.cognito.userPoolId}
-    COGNITO_CLIENT_ID: ${self:custom.cognito.clientId}
     LOG_LEVEL: ${opt:logLevel, 'INFO'}
   iam:
     role:
@@ -55,15 +53,6 @@ provider:
           Resource:
             - "arn:aws:s3:::${self:provider.environment.S3_BUCKET}"
             - "arn:aws:s3:::${self:provider.environment.S3_BUCKET}/*"
-        - Effect: Allow
-          Action:
-            - cognito-idp:AdminGetUser
-            - cognito-idp:AdminCreateUser
-            - cognito-idp:AdminUpdateUserAttributes
-            - cognito-idp:AdminDeleteUser
-            - cognito-idp:AdminListGroupsForUser
-          Resource:
-            - "arn:aws:cognito-idp:${aws:region}:${aws:accountId}:userpool/${self:custom.cognito.userPoolId}"
         - Effect: Allow
           Action:
             - elasticache:DescribeServerlessCaches
@@ -115,26 +104,17 @@ custom:
     prod:
       host: !GetAtt GameCache.RedisEndpoint.Address
       port: !GetAtt GameCache.RedisEndpoint.Port
-  cognito:
-    userPoolId: ${self:custom.cognito.${self:provider.stage}.userPoolId}
-    clientId: ${self:custom.cognito.${self:provider.stage}.clientId}
-    dev:
-      userPoolId: ${ssm:/botany-battle/${self:provider.stage}/cognito/user-pool-id}
-      clientId: ${ssm:/botany-battle/${self:provider.stage}/cognito/client-id}
-    prod:
-      userPoolId: ${ssm:/botany-battle/${self:provider.stage}/cognito/user-pool-id}
-      clientId: ${ssm:/botany-battle/${self:provider.stage}/cognito/client-id}
 
 functions:
-  auth:
-    handler: src/functions/auth/handler.handler
+  gamecenterAuth:
+    handler: src/functions/gamecenter/authHandler.handler
     events:
       - http:
-          path: /auth
+          path: /auth/gamecenter
           method: post
           cors: true
     environment:
-      FUNCTION_NAME: auth
+      FUNCTION_NAME: gamecenterAuth
 
   game:
     handler: src/functions/game/handler.handler
@@ -143,11 +123,6 @@ functions:
           path: /game
           method: post
           cors: true
-          private: true
-          authorizer:
-            name: cognitoAuthorizer
-            type: COGNITO_USER_POOLS
-            arn: arn:aws:cognito-idp:${self:provider.region}:${aws:accountId}:userpool/${self:custom.cognito.userPoolId}
       - websocket:
           route: $connect
       - websocket:
@@ -164,11 +139,6 @@ functions:
           path: /plant
           method: get
           cors: true
-          private: true
-          authorizer:
-            name: cognitoAuthorizer
-            type: COGNITO_USER_POOLS
-            arn: arn:aws:cognito-idp:${self:provider.region}:${aws:accountId}:userpool/${self:custom.cognito.userPoolId}
     environment:
       FUNCTION_NAME: plant
 
@@ -179,11 +149,6 @@ functions:
           path: /shop
           method: post
           cors: true
-          private: true
-          authorizer:
-            name: cognitoAuthorizer
-            type: COGNITO_USER_POOLS
-            arn: arn:aws:cognito-idp:${self:provider.region}:${aws:accountId}:userpool/${self:custom.cognito.userPoolId}
     environment:
       FUNCTION_NAME: shop
 

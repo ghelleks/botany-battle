@@ -147,16 +147,14 @@ enum APIEndpoint {
 }
 
 enum AuthEndpoint {
-    case login
+    case gamecenter
     case logout
-    case refresh
     case profile
     
     var path: String {
         switch self {
-        case .login: return "/login"
+        case .gamecenter: return "/gamecenter"
         case .logout: return "/logout"
-        case .refresh: return "/refresh"
         case .profile: return "/profile"
         }
     }

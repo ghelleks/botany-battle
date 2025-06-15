@@ -12,6 +12,7 @@
 		A12345678901234567890142 /* SimpleContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A12345678901234567890143 /* SimpleContentView.swift */; };
 		A1234567890123456789012E /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A1234567890123456789012F /* Assets.xcassets */; };
 		A12345678901234567890130 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A12345678901234567890131 /* Preview Assets.xcassets */; };
+		A12345678901234567890144 /* GameKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A12345678901234567890145 /* GameKit.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -21,6 +22,8 @@
 		A12345678901234567890143 /* SimpleContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimpleContentView.swift; sourceTree = "<group>"; };
 		A1234567890123456789012F /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		A12345678901234567890131 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
+		A12345678901234567890145 /* GameKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = GameKit.framework; path = System/Library/Frameworks/GameKit.framework; sourceTree = SDKROOT; };
+		A12345678901234567890146 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -28,6 +31,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A12345678901234567890144 /* GameKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -39,6 +43,7 @@
 			children = (
 				A12345678901234567890135 /* BotanyBattle */,
 				A12345678901234567890136 /* Products */,
+				A12345678901234567890147 /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -48,6 +53,7 @@
 				A1234567890123456789012B /* BotanyBattleApp.swift */,
 				A1234567890123456789012D /* ContentView.swift */,
 				A12345678901234567890143 /* SimpleContentView.swift */,
+				A12345678901234567890146 /* Info.plist */,
 				A1234567890123456789012F /* Assets.xcassets */,
 				A12345678901234567890137 /* Preview Content */,
 			);
@@ -68,6 +74,14 @@
 				A12345678901234567890131 /* Preview Assets.xcassets */,
 			);
 			path = "Preview Content";
+			sourceTree = "<group>";
+		};
+		A12345678901234567890147 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				A12345678901234567890145 /* GameKit.framework */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -277,7 +291,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"BotanyBattle/Preview Content\"";
 				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = BotanyBattle/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -305,7 +319,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"BotanyBattle/Preview Content\"";
 				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = BotanyBattle/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
