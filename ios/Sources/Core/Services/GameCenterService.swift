@@ -11,6 +11,7 @@ protocol GameCenterServiceProtocol {
     func getAuthenticationToken() async throws -> String
 }
 
+@available(iOS 14.0, macOS 11.0, *)
 final class GameCenterService: GameCenterServiceProtocol {
     private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "BotanyBattle", category: "GameCenter")
     

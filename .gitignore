@@ -1,1 +1,2 @@
-.DS_Store
+.DS_Storeios/node_modules/
+ios/package*.json

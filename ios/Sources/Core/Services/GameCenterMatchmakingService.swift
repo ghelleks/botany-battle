@@ -17,6 +17,7 @@ struct GameCenterInvitation {
     let expiresAt: Date
 }
 
+@available(iOS 14.0, macOS 11.0, *)
 final class GameCenterMatchmakingService: GameCenterMatchmakingServiceProtocol {
     @Dependency(\.gameCenterService) var gameCenterService
     @Dependency(\.networkService) var networkService
@@ -225,11 +226,6 @@ struct MatchStatusResponse: Codable {
     let estimatedWaitTime: Int?
 }
 
-struct GameResponse: Codable {
-    let game: Game
-}
-
-struct EmptyResponse: Codable {}
 
 enum GameCenterMatchmakingError: Error, LocalizedError {
     case notAuthenticated

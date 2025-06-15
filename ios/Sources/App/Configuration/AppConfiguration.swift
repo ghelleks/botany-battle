@@ -1,20 +1,12 @@
 import Foundation
-import Amplify
-import AWSCognitoAuthPlugin
 
 final class AppConfiguration {
     static func configure() {
-        configureAmplify()
+        configureApp()
     }
     
-    private static func configureAmplify() {
-        do {
-            try Amplify.add(plugin: AWSCognitoAuthPlugin())
-            try Amplify.configure()
-            print("Amplify configured successfully")
-        } catch {
-            print("Failed to initialize Amplify: \(error)")
-        }
+    private static func configureApp() {
+        print("App configured successfully")
     }
 }
 
