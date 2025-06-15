@@ -39,7 +39,9 @@ struct AuthFeature {
                             let user = try await gameCenterService.getCurrentUser()
                             await send(.loginSuccess(user))
                         } else {
-                            await send(.authCheckComplete)
+                            // Automatically try to authenticate if not already authenticated
+                            let user = try await gameCenterService.authenticatePlayer()
+                            await send(.loginSuccess(user))
                         }
                     } catch {
                         await send(.authCheckComplete)

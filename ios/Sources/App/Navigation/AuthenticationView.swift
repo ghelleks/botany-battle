@@ -9,7 +9,11 @@ struct AuthenticationView: View {
             VStack(spacing: 32) {
                 headerView
                 
-                gameCenterLoginButton
+                if store.isLoading {
+                    loadingView
+                } else {
+                    gameCenterLoginButton
+                }
                 
                 Spacer()
             }
@@ -42,6 +46,28 @@ struct AuthenticationView: View {
                 .multilineTextAlignment(.center)
         }
         .padding(.bottom, 20)
+    }
+    
+    private var loadingView: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "gamecontroller.fill")
+                .font(.system(size: 60))
+                .foregroundColor(.botanicalGreen)
+            
+            ProgressView()
+                .scaleEffect(1.2)
+                .tint(.botanicalGreen)
+            
+            Text("Connecting to Game Center...")
+                .botanicalStyle(.title2)
+                .multilineTextAlignment(.center)
+            
+            Text("Please wait while we authenticate your Game Center account")
+                .botanicalStyle(.body)
+                .foregroundColor(.textSecondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 16)
+        }
     }
     
     private var gameCenterLoginButton: some View {
