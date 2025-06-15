@@ -6,17 +6,16 @@ import { APIGatewayProxyEvent } from 'aws-lambda';
 
 describe('Security Tests', () => {
   describe('Authentication and Authorization', () => {
-    it('should reject requests without valid JWT tokens', async () => {
+    it('should reject requests without valid Game Center tokens', async () => {
       const unauthorizedEvent: Partial<APIGatewayProxyEvent> = {
         headers: {},
-        requestContext: {
-          authorizer: null
-        } as any
+        requestContext: {} as any
       };
 
       const mockSecurityCheck = (event: any) => {
-        if (!event.requestContext?.authorizer?.claims?.sub) {
-          return { statusCode: 401, body: JSON.stringify({ error: 'Unauthorized' }) };
+        const authHeader = event.headers?.Authorization || event.headers?.authorization;
+        if (!authHeader || !authHeader.startsWith('GameCenter ')) {
+          return { statusCode: 401, body: JSON.stringify({ error: 'Unauthorized: Missing Game Center token' }) };
         }
         return { statusCode: 200, body: JSON.stringify({ success: true }) };
       };
@@ -25,61 +24,114 @@ describe('Security Tests', () => {
       expect(result.statusCode).toBe(401);
     });
 
-    it('should validate JWT token structure and expiration', async () => {
-      const expiredToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjE1MTYyMzkwMjJ9.4Adcj3UFYzPUVaVF43FmMab6RlaQD8A9V8wFzzht-KQ'; // Expired token
+    it('should validate Game Center token structure and expiration', async () => {
+      // Mock expired Game Center token
+      const expiredTokenData = {
+        playerId: 'G:123456789',
+        signature: 'dGVzdF9zaWduYXR1cmU=',
+        salt: 'dGVzdF9zYWx0',
+        timestamp: String(Math.floor(Date.now() / 1000) - 3600), // 1 hour ago
+        bundleId: 'com.botanybattle.app'
+      };
+      const expiredToken = Buffer.from(JSON.stringify(expiredTokenData)).toString('base64');
 
-      const mockTokenValidation = (token: string) => {
+      const mockGameCenterTokenValidation = (token: string) => {
         try {
-          // Mock JWT validation - in real implementation would use proper JWT library
-          const parts = token.split('.');
-          if (parts.length !== 3) {
-            throw new Error('Invalid token structure');
+          const decodedData = Buffer.from(token, 'base64').toString('utf-8');
+          const tokenData = JSON.parse(decodedData);
+          
+          // Validate required fields
+          if (!tokenData.playerId || !tokenData.signature || !tokenData.salt || !tokenData.timestamp) {
+            throw new Error('Invalid token structure: missing required fields');
           }
           
-          const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
-          const now = Math.floor(Date.now() / 1000);
+          // Check token age (5 minutes max)
+          const tokenTime = parseInt(tokenData.timestamp);
+          const currentTime = Math.floor(Date.now() / 1000);
+          const timeDiff = currentTime - tokenTime;
           
-          if (payload.exp && payload.exp < now) {
+          if (timeDiff > 300) { // 5 minutes
             throw new Error('Token expired');
           }
           
-          return { valid: true, payload };
+          // Validate bundle ID
+          if (tokenData.bundleId !== 'com.botanybattle.app') {
+            throw new Error('Invalid bundle ID');
+          }
+          
+          return { valid: true, tokenData };
         } catch (error) {
           return { valid: false, error: (error as Error).message };
         }
       };
 
-      const result = mockTokenValidation(expiredToken);
+      const result = mockGameCenterTokenValidation(expiredToken);
       expect(result.valid).toBe(false);
       expect(result.error).toBe('Token expired');
     });
 
-    it('should prevent privilege escalation', async () => {
-      const regularUserEvent: Partial<APIGatewayProxyEvent> = {
-        requestContext: {
-          authorizer: {
-            claims: {
-              sub: 'user-123',
-              'cognito:groups': ['regular-users']
-            }
+    it('should validate Game Center token bundle ID', async () => {
+      const invalidBundleTokenData = {
+        playerId: 'G:123456789',
+        signature: 'dGVzdF9zaWduYXR1cmU=',
+        salt: 'dGVzdF9zYWx0',
+        timestamp: String(Math.floor(Date.now() / 1000)),
+        bundleId: 'com.malicious.app' // Wrong bundle ID
+      };
+      const invalidToken = Buffer.from(JSON.stringify(invalidBundleTokenData)).toString('base64');
+
+      const mockGameCenterTokenValidation = (token: string) => {
+        try {
+          const decodedData = Buffer.from(token, 'base64').toString('utf-8');
+          const tokenData = JSON.parse(decodedData);
+          
+          if (tokenData.bundleId !== 'com.botanybattle.app') {
+            throw new Error('Invalid bundle ID');
           }
-        } as any
-      };
-
-      const mockPrivilegeCheck = (event: any, requiredRole: string) => {
-        const userGroups = event.requestContext?.authorizer?.claims?.['cognito:groups'] || [];
-        const hasRequiredRole = Array.isArray(userGroups) ? 
-          userGroups.includes(requiredRole) : 
-          userGroups === requiredRole;
-
-        if (!hasRequiredRole) {
-          return { statusCode: 403, body: JSON.stringify({ error: 'Insufficient privileges' }) };
+          
+          return { valid: true, tokenData };
+        } catch (error) {
+          return { valid: false, error: (error as Error).message };
         }
-        return { statusCode: 200, body: JSON.stringify({ success: true }) };
       };
 
-      const result = mockPrivilegeCheck(regularUserEvent, 'admin');
-      expect(result.statusCode).toBe(403);
+      const result = mockGameCenterTokenValidation(invalidToken);
+      expect(result.valid).toBe(false);
+      expect(result.error).toBe('Invalid bundle ID');
+    });
+
+    it('should prevent unauthorized access with malformed Game Center tokens', async () => {
+      const malformedTokens = [
+        '', // Empty token
+        'invalid-base64!@#', // Invalid base64
+        Buffer.from('not-json').toString('base64'), // Valid base64 but not JSON
+        Buffer.from('{}').toString('base64'), // Valid JSON but missing fields
+        Buffer.from(JSON.stringify({ playerId: 'G:123' })).toString('base64') // Missing required fields
+      ];
+
+      const mockGameCenterTokenValidation = (token: string) => {
+        try {
+          if (!token) {
+            throw new Error('Empty token');
+          }
+          
+          const decodedData = Buffer.from(token, 'base64').toString('utf-8');
+          const tokenData = JSON.parse(decodedData);
+          
+          if (!tokenData.playerId || !tokenData.signature || !tokenData.salt || !tokenData.timestamp) {
+            throw new Error('Invalid token structure: missing required fields');
+          }
+          
+          return { valid: true, tokenData };
+        } catch (error) {
+          return { valid: false, error: (error as Error).message };
+        }
+      };
+
+      malformedTokens.forEach(token => {
+        const result = mockGameCenterTokenValidation(token);
+        expect(result.valid).toBe(false);
+      });
     });
   });
 

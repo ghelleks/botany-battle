@@ -62,32 +62,29 @@ describe('User Service', () => {
     const { createClient } = require('redis');
     mockRedis = createClient();
     
-    // Setup mock API Gateway event
+    // Setup mock API Gateway event with Game Center authentication
     mockEvent = {
-      requestContext: {
-        authorizer: {
-          claims: {
-            sub: 'test-user-id'
-          }
-        }
+      headers: {
+        Authorization: 'GameCenter eyJwbGF5ZXJJZCI6IkciMTIzNDU2Nzg5In0=' // Mock Game Center token
       },
       body: null,
-      queryStringParameters: null
+      queryStringParameters: null,
+      requestContext: {}
     };
   });
 
   describe('getUserProfile', () => {
     const mockUserProfile = {
-      userId: 'test-user-id',
-      username: 'testuser',
-      email: 'test@example.com',
-      displayName: 'Test User',
-      avatarURL: 'https://example.com/avatar.jpg',
+      id: 'G:123456789', // Game Center player ID format
+      username: 'testplayer',
+      email: null, // Game Center doesn't provide email
+      displayName: 'Test Player',
+      avatarURL: null, // Game Center avatar handling is different
       createdAt: '2023-01-01T00:00:00Z'
     };
 
     const mockUserStats = {
-      userId: 'test-user-id',
+      id: 'G:123456789',
       eloRating: 1250,
       rank: 'Green Thumb',
       totalGamesPlayed: 25,
@@ -109,11 +106,11 @@ describe('User Service', () => {
       
       const responseBody = JSON.parse(result.body);
       expect(responseBody.user).toEqual({
-        id: 'test-user-id',
-        username: 'testuser',
-        email: 'test@example.com',
-        displayName: 'Test User',
-        avatarURL: 'https://example.com/avatar.jpg',
+        id: 'G:123456789',
+        username: 'testplayer',
+        email: null,
+        displayName: 'Test Player',
+        avatarURL: null,
         createdAt: '2023-01-01T00:00:00Z',
         stats: {
           totalGamesPlayed: 25,
