@@ -21,8 +21,8 @@ final class GameCenterService: GameCenterServiceProtocol {
         logger.info("Starting Game Center authentication")
         
         // Check if Game Center is available
-        guard GKLocalPlayer.local.supportsMultiplayer else {
-            logger.error("Game Center multiplayer not supported")
+        guard GKLocalPlayer.local.isAuthenticated || !GKLocalPlayer.local.isUnderage else {
+            logger.error("Game Center not available or player underage")
             throw GameCenterError.notSupported
         }
         
@@ -93,7 +93,7 @@ final class GameCenterService: GameCenterServiceProtocol {
         }
         
         return try await withCheckedThrowingContinuation { continuation in
-            GKLocalPlayer.local.generateIdentityVerificationSignature { signature, salt, timestamp, error in
+            GKLocalPlayer.local.generateIdentityVerificationSignature { publicKeyURL, signature, salt, timestamp, error in
                 if let error = error {
                     continuation.resume(throwing: GameCenterError.tokenGenerationFailed(error))
                     return
@@ -111,7 +111,8 @@ final class GameCenterService: GameCenterServiceProtocol {
                     "signature": signature.base64EncodedString(),
                     "salt": salt.base64EncodedString(),
                     "timestamp": String(timestamp),
-                    "bundleId": Bundle.main.bundleIdentifier ?? ""
+                    "bundleId": Bundle.main.bundleIdentifier ?? "",
+                    "publicKeyURL": publicKeyURL?.absoluteString ?? ""
                 ]
                 
                 do {
@@ -132,12 +133,8 @@ final class GameCenterService: GameCenterServiceProtocol {
             throw GameCenterError.notAuthenticated
         }
         
-        // Get display name
-        let displayName = await withCheckedContinuation { continuation in
-            player.loadDisplayName { displayName, error in
-                continuation.resume(returning: displayName ?? player.alias)
-            }
-        }
+        // Get display name (use alias directly as loadDisplayName is not available)
+        let displayName = player.displayName.isEmpty ? player.alias : player.displayName
         
         // Get profile photo
         let avatarURL: URL? = await withCheckedContinuation { continuation in

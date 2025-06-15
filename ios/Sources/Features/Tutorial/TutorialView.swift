@@ -1,5 +1,8 @@
 import SwiftUI
 import ComposableArchitecture
+#if canImport(UIKit)
+import UIKit
+#endif
 
 struct TutorialView: View {
     let store: StoreOf<TutorialFeature>
@@ -51,7 +54,7 @@ struct TutorialView: View {
                 TutorialNavigationButtons(store: store)
             }
             .navigationBarHidden(true)
-            .background(Color(.systemBackground))
+            .background(Color.backgroundPrimary)
         }
     }
 }
@@ -82,7 +85,7 @@ struct TutorialProgressBar: View {
                 .tint(.botanicalGreen)
         }
         .padding()
-        .background(Color(.systemGray6))
+        .background(Color.backgroundSecondary)
     }
 }
 
@@ -123,12 +126,12 @@ struct TutorialNavigationButtons: View {
                 Button("Skip Tutorial") {
                     store.send(.skipTutorial)
                 }
-                .botanicalStyle(BotanicalTextStyle.caption)
+                .font(.caption)
                 .foregroundColor(.secondary)
             }
         }
         .padding()
-        .background(Color(.systemBackground))
+        .background(Color.backgroundPrimary)
     }
 }
 
@@ -215,7 +218,7 @@ struct TutorialGameplayDemo: View {
             }
         }
         .padding()
-        .background(Color(.systemGray6))
+        .background(Color.backgroundSecondary)
         .cornerRadius(12)
     }
     
@@ -228,7 +231,7 @@ struct TutorialGameplayDemo: View {
     
     private func getOptionBackground(_ option: String) -> Color {
         if !showResult || selectedAnswer != option {
-            return Color(.systemBackground)
+            return Color.backgroundPrimary
         }
         return option == demoPlant ? .green : .red
     }
@@ -268,7 +271,7 @@ struct TutorialScoringDemo: View {
             }
         }
         .padding()
-        .background(Color(.systemGray6))
+        .background(Color.backgroundSecondary)
         .cornerRadius(12)
     }
 }

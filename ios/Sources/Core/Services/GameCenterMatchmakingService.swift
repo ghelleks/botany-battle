@@ -119,7 +119,7 @@ final class GameCenterMatchmakingService: GameCenterMatchmakingServiceProtocol {
         return PlayerPreferences(
             allowCrossSkillMatching: true,
             maxWaitTime: 30, // seconds
-            preferredRegion: Locale.current.regionCode ?? "US"
+            preferredRegion: Locale.current.region?.identifier ?? "US"
         )
     }
     
