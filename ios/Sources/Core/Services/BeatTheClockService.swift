@@ -47,9 +47,8 @@ struct BeatTheClockValidation {
 final class BeatTheClockService: BeatTheClockServiceProtocol {
     @Dependency(\.singleUserGameService) var singleUserGameService
     @Dependency(\.personalBestService) var personalBestService
-    @Dependency(\.userDefaults) var userDefaults
+    @Dependency(\.persistenceService) var persistenceService
     
-    private let leaderboardKey = "beat_the_clock_leaderboard"
     private let maxLeaderboardEntries = 10
     
     func startBeatTheClockGame(difficulty: Game.Difficulty) -> SingleUserGameSession {
@@ -66,7 +65,7 @@ final class BeatTheClockService: BeatTheClockServiceProtocol {
         let pointsPerSecond = timeUsed > 0 ? Double(session.correctAnswers) / timeUsed : 0
         
         // Check if this is a new record
-        let existingBest = getBestScore(for: session.difficulty)
+        let existingBest = persistenceService.getBestBeatTheClockScore(difficulty: session.difficulty)
         let isNewRecord = existingBest?.correctAnswers ?? 0 < session.correctAnswers
         
         return BeatTheClockScore(
@@ -83,28 +82,11 @@ final class BeatTheClockService: BeatTheClockServiceProtocol {
     }
     
     func getBestScore(for difficulty: Game.Difficulty) -> BeatTheClockScore? {
-        let leaderboard = getLeaderboard(for: difficulty)
-        return leaderboard.first // Leaderboard is sorted by score descending
+        return persistenceService.getBestBeatTheClockScore(difficulty: difficulty)
     }
     
     func getLeaderboard(for difficulty: Game.Difficulty) -> [BeatTheClockScore] {
-        let allScores = loadAllScores()
-        return allScores
-            .filter { $0.difficulty == difficulty }
-            .sorted { lhs, rhs in
-                // Primary sort: most correct answers
-                if lhs.correctAnswers != rhs.correctAnswers {
-                    return lhs.correctAnswers > rhs.correctAnswers
-                }
-                // Secondary sort: higher accuracy
-                if abs(lhs.accuracy - rhs.accuracy) > 0.001 {
-                    return lhs.accuracy > rhs.accuracy
-                }
-                // Tertiary sort: faster completion
-                return lhs.timeUsed < rhs.timeUsed
-            }
-            .prefix(maxLeaderboardEntries)
-            .map { $0 }
+        return persistenceService.getBeatTheClockScores(difficulty: difficulty, limit: maxLeaderboardEntries)
     }
     
     func validateScore(session: SingleUserGameSession) -> BeatTheClockValidation {
@@ -147,51 +129,12 @@ final class BeatTheClockService: BeatTheClockServiceProtocol {
         )
     }
     
-    // MARK: - Private Methods
-    
-    private func loadAllScores() -> [BeatTheClockScore] {
-        guard let jsonString = userDefaults.string(forKey: leaderboardKey),
-              let data = jsonString.data(using: .utf8) else {
-            return []
-        }
-        
-        do {
-            return try JSONDecoder().decode([BeatTheClockScore].self, from: data)
-        } catch {
-            print("Failed to load Beat the Clock scores: \(error)")
-            return []
-        }
-    }
-    
-    private func saveAllScores(_ scores: [BeatTheClockScore]) {
-        do {
-            let data = try JSONEncoder().encode(scores)
-            let jsonString = String(data: data, encoding: .utf8) ?? ""
-            userDefaults.set(jsonString, forKey: leaderboardKey)
-        } catch {
-            print("Failed to save Beat the Clock scores: \(error)")
-        }
-    }
-    
     func saveScore(_ score: BeatTheClockScore) {
-        var allScores = loadAllScores()
-        allScores.append(score)
-        
-        // Keep only the best scores per difficulty
-        let groupedScores = Dictionary(grouping: allScores) { $0.difficulty }
-        let filteredScores = groupedScores.values.flatMap { scores in
-            scores.sorted { lhs, rhs in
-                if lhs.correctAnswers != rhs.correctAnswers {
-                    return lhs.correctAnswers > rhs.correctAnswers
-                }
-                if abs(lhs.accuracy - rhs.accuracy) > 0.001 {
-                    return lhs.accuracy > rhs.accuracy
-                }
-                return lhs.timeUsed < rhs.timeUsed
-            }.prefix(maxLeaderboardEntries)
+        do {
+            try persistenceService.saveBeatTheClockScore(score)
+        } catch {
+            print("Failed to save Beat the Clock score: \(error)")
         }
-        
-        saveAllScores(Array(filteredScores))
     }
 }
 

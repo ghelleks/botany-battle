@@ -106,9 +106,8 @@ struct SpeedrunValidation {
 final class SpeedrunService: SpeedrunServiceProtocol {
     @Dependency(\.singleUserGameService) var singleUserGameService
     @Dependency(\.personalBestService) var personalBestService
-    @Dependency(\.userDefaults) var userDefaults
+    @Dependency(\.persistenceService) var persistenceService
     
-    private let leaderboardKey = "speedrun_leaderboard"
     private let maxLeaderboardEntries = 25
     
     func startSpeedrunGame(difficulty: Game.Difficulty) -> SingleUserGameSession {
@@ -134,7 +133,7 @@ final class SpeedrunService: SpeedrunServiceProtocol {
         )
         
         // Check if this is a new record
-        let existingBest = getBestScore(for: session.difficulty)
+        let existingBest = persistenceService.getBestSpeedrunScore(difficulty: session.difficulty)
         let isNewRecord = existingBest?.speedrunRating ?? 0 < rating
         
         return SpeedrunScore(
@@ -153,28 +152,11 @@ final class SpeedrunService: SpeedrunServiceProtocol {
     }
     
     func getBestScore(for difficulty: Game.Difficulty) -> SpeedrunScore? {
-        let leaderboard = getLeaderboard(for: difficulty)
-        return leaderboard.first // Leaderboard is sorted by rating descending
+        return persistenceService.getBestSpeedrunScore(difficulty: difficulty)
     }
     
     func getLeaderboard(for difficulty: Game.Difficulty) -> [SpeedrunScore] {
-        let allScores = loadAllScores()
-        return allScores
-            .filter { $0.difficulty == difficulty }
-            .sorted { lhs, rhs in
-                // Primary sort: highest rating
-                if lhs.speedrunRating != rhs.speedrunRating {
-                    return lhs.speedrunRating > rhs.speedrunRating
-                }
-                // Secondary sort: completion status
-                if lhs.isCompleted != rhs.isCompleted {
-                    return lhs.isCompleted && !rhs.isCompleted
-                }
-                // Tertiary sort: faster time
-                return lhs.completionTime < rhs.completionTime
-            }
-            .prefix(maxLeaderboardEntries)
-            .map { $0 }
+        return persistenceService.getSpeedrunScores(difficulty: difficulty, limit: maxLeaderboardEntries)
     }
     
     func validateScore(session: SingleUserGameSession) -> SpeedrunValidation {
@@ -295,49 +277,12 @@ final class SpeedrunService: SpeedrunServiceProtocol {
         }
     }
     
-    private func loadAllScores() -> [SpeedrunScore] {
-        guard let jsonString = userDefaults.string(forKey: leaderboardKey),
-              let data = jsonString.data(using: .utf8) else {
-            return []
-        }
-        
-        do {
-            return try JSONDecoder().decode([SpeedrunScore].self, from: data)
-        } catch {
-            print("Failed to load Speedrun scores: \(error)")
-            return []
-        }
-    }
-    
-    private func saveAllScores(_ scores: [SpeedrunScore]) {
-        do {
-            let data = try JSONEncoder().encode(scores)
-            let jsonString = String(data: data, encoding: .utf8) ?? ""
-            userDefaults.set(jsonString, forKey: leaderboardKey)
-        } catch {
-            print("Failed to save Speedrun scores: \(error)")
-        }
-    }
-    
     func saveScore(_ score: SpeedrunScore) {
-        var allScores = loadAllScores()
-        allScores.append(score)
-        
-        // Keep only the best scores per difficulty
-        let groupedScores = Dictionary(grouping: allScores) { $0.difficulty }
-        let filteredScores = groupedScores.values.flatMap { scores in
-            scores.sorted { lhs, rhs in
-                if lhs.speedrunRating != rhs.speedrunRating {
-                    return lhs.speedrunRating > rhs.speedrunRating
-                }
-                if lhs.isCompleted != rhs.isCompleted {
-                    return lhs.isCompleted && !rhs.isCompleted
-                }
-                return lhs.completionTime < rhs.completionTime
-            }.prefix(maxLeaderboardEntries)
+        do {
+            try persistenceService.saveSpeedrunScore(score)
+        } catch {
+            print("Failed to save Speedrun score: \(error)")
         }
-        
-        saveAllScores(Array(filteredScores))
     }
 }
 

@@ -11,39 +11,24 @@ protocol PersonalBestServiceProtocol {
 }
 
 final class PersonalBestService: PersonalBestServiceProtocol {
-    @Dependency(\.userDefaults) var userDefaults
-    
-    private let personalBestsKey = "personal_bests"
+    @Dependency(\.persistenceService) var persistenceService
     
     func getPersonalBest(for mode: GameMode, difficulty: Game.Difficulty) -> PersonalBest? {
-        let allBests = getAllPersonalBests()
-        return allBests.first { $0.mode == mode && $0.difficulty == difficulty }
+        return persistenceService.getPersonalBest(mode: mode, difficulty: difficulty)
     }
     
     func getAllPersonalBests() -> [PersonalBest] {
-        guard let data = userDefaults.string(forKey: personalBestsKey)?.data(using: .utf8) else {
-            return []
-        }
-        
-        do {
-            let personalBests = try JSONDecoder().decode([PersonalBest].self, from: data)
-            return personalBests.sorted { $0.achievedAt > $1.achievedAt }
-        } catch {
-            print("Failed to decode personal bests: \(error)")
-            return []
-        }
+        return persistenceService.getAllPersonalBests()
     }
     
     func savePersonalBest(_ personalBest: PersonalBest) -> Bool {
-        var allBests = getAllPersonalBests()
-        
-        // Remove existing personal best for same mode/difficulty
-        allBests.removeAll { $0.mode == personalBest.mode && $0.difficulty == personalBest.difficulty }
-        
-        // Add new personal best
-        allBests.append(personalBest)
-        
-        return saveAllPersonalBests(allBests)
+        do {
+            try persistenceService.savePersonalBest(personalBest)
+            return true
+        } catch {
+            print("Failed to save personal best: \(error)")
+            return false
+        }
     }
     
     func isNewPersonalBest(_ session: SingleUserGameSession) -> Bool {
@@ -77,18 +62,15 @@ final class PersonalBestService: PersonalBestServiceProtocol {
     }
     
     func clearAllPersonalBests() {
-        userDefaults.removeObject(forKey: personalBestsKey)
-    }
-    
-    private func saveAllPersonalBests(_ personalBests: [PersonalBest]) -> Bool {
-        do {
-            let data = try JSONEncoder().encode(personalBests)
-            let jsonString = String(data: data, encoding: .utf8) ?? ""
-            userDefaults.set(jsonString, forKey: personalBestsKey)
-            return true
-        } catch {
-            print("Failed to encode personal bests: \(error)")
-            return false
+        // Clear all personal bests for all modes and difficulties
+        for mode in GameMode.allCases {
+            for difficulty in Game.Difficulty.allCases {
+                do {
+                    try persistenceService.deletePersonalBest(mode: mode, difficulty: difficulty)
+                } catch {
+                    print("Failed to delete personal best for \(mode) \(difficulty): \(error)")
+                }
+            }
         }
     }
 }

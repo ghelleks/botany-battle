@@ -211,24 +211,30 @@ struct Round: Codable, Equatable, Identifiable {
 
 struct PersonalBest: Codable, Equatable, Identifiable {
     let id: String
-    let mode: GameMode
+    let gameMode: GameMode
     let difficulty: Game.Difficulty
     let score: Int
-    let accuracy: Double
-    let totalTime: TimeInterval?
-    let questionsAnswered: Int
     let correctAnswers: Int
+    let questionsAnswered: Int
+    let totalGameTime: TimeInterval
     let achievedAt: Date
     
+    // Computed properties for backwards compatibility
+    var mode: GameMode { gameMode }
+    var accuracy: Double {
+        guard questionsAnswered > 0 else { return 0.0 }
+        return Double(correctAnswers) / Double(questionsAnswered)
+    }
+    var totalTime: TimeInterval? { totalGameTime }
+    
     var displayScore: String {
-        switch mode {
+        switch gameMode {
         case .multiplayer:
             return "\(score) points"
         case .beatTheClock:
-            return "\(score) correct answers"
+            return "\(correctAnswers) correct answers"
         case .speedrun:
-            let timeText = totalTime.map { String(format: "%.1fs", $0) } ?? "N/A"
-            return timeText
+            return String(format: "%.1fs", totalGameTime)
         }
     }
     
@@ -355,13 +361,12 @@ struct SingleUserGameSession: Codable, Equatable, Identifiable {
     func toPersonalBest() -> PersonalBest {
         PersonalBest(
             id: UUID().uuidString,
-            mode: mode,
+            gameMode: mode,
             difficulty: difficulty,
             score: score,
-            accuracy: accuracy,
-            totalTime: totalGameTime,
-            questionsAnswered: questionsAnswered,
             correctAnswers: correctAnswers,
+            questionsAnswered: questionsAnswered,
+            totalGameTime: totalGameTime,
             achievedAt: Date()
         )
     }
