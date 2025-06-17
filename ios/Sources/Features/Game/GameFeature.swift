@@ -27,6 +27,11 @@ struct GameFeature {
         var newPersonalBest: PersonalBest?
         var isPaused = false
         
+        // Beat the Clock specific state
+        var beatTheClockScore: BeatTheClockScore?
+        var beatTheClockPersonalBest: BeatTheClockScore?
+        var beatTheClockLeaderboard: [BeatTheClockScore] = []
+        
         // Computed properties that work for both modes
         var currentMode: GameMode {
             return singleUserSession?.mode ?? currentGame?.mode ?? selectedGameMode
@@ -119,6 +124,13 @@ struct GameFeature {
         case resumeGame
         case singleUserGameCompleted(PersonalBest?)
         
+        // Beat the Clock specific actions
+        case beatTheClockGameCompleted(BeatTheClockScore)
+        case loadBeatTheClockPersonalBest(Game.Difficulty)
+        case beatTheClockPersonalBestLoaded(BeatTheClockScore?)
+        case loadBeatTheClockLeaderboard(Game.Difficulty)
+        case beatTheClockLeaderboardLoaded([BeatTheClockScore])
+        
         // Common actions
         case submitAnswer(String)
         case leaveGame
@@ -138,6 +150,7 @@ struct GameFeature {
     @Dependency(\.gameTimerService) var gameTimerService
     @Dependency(\.gameTimerValidationService) var gameTimerValidationService
     @Dependency(\.gameTimerPersistenceService) var gameTimerPersistenceService
+    @Dependency(\.beatTheClockService) var beatTheClockService
     @Dependency(\.continuousClock) var clock
     
     enum CancelID { 
@@ -370,9 +383,8 @@ struct GameFeature {
                 // Check if time expired for Beat the Clock
                 if update.isExpired && session.mode == .beatTheClock {
                     return .run { send in
-                        var expiredSession = updatedSession
-                        let personalBest = singleUserGameService.completeGame(session: &expiredSession)
-                        await send(.singleUserGameCompleted(personalBest))
+                        let beatTheClockScore = beatTheClockService.calculateScore(session: updatedSession)
+                        await send(.beatTheClockGameCompleted(beatTheClockScore))
                     }
                 }
                 
@@ -414,6 +426,45 @@ struct GameFeature {
                 
             case .personalBestsLoaded(let personalBests):
                 state.personalBests = personalBests
+                return .none
+                
+            // MARK: - Beat the Clock Actions
+            case .beatTheClockGameCompleted(let score):
+                state.beatTheClockScore = score
+                state.singleUserSession = nil
+                state.currentQuestion = nil
+                state.isPaused = false
+                gameTimerService.stopTimer()
+                
+                // Save the score
+                if let service = beatTheClockService as? BeatTheClockService {
+                    service.saveScore(score)
+                }
+                
+                return .concatenate(
+                    .cancel(id: CancelID.gameTimer),
+                    .send(.loadBeatTheClockPersonalBest(score.difficulty)),
+                    .send(.loadBeatTheClockLeaderboard(score.difficulty))
+                )
+                
+            case .loadBeatTheClockPersonalBest(let difficulty):
+                return .run { send in
+                    let personalBest = beatTheClockService.getBestScore(for: difficulty)
+                    await send(.beatTheClockPersonalBestLoaded(personalBest))
+                }
+                
+            case .beatTheClockPersonalBestLoaded(let personalBest):
+                state.beatTheClockPersonalBest = personalBest
+                return .none
+                
+            case .loadBeatTheClockLeaderboard(let difficulty):
+                return .run { send in
+                    let leaderboard = beatTheClockService.getLeaderboard(for: difficulty)
+                    await send(.beatTheClockLeaderboardLoaded(leaderboard))
+                }
+                
+            case .beatTheClockLeaderboardLoaded(let leaderboard):
+                state.beatTheClockLeaderboard = leaderboard
                 return .none
             }
         }
@@ -462,8 +513,15 @@ struct GameFeature {
         if session.isComplete {
             return .run { send in
                 var completedSession = session
-                let personalBest = singleUserGameService.completeGame(session: &completedSession)
-                await send(.singleUserGameCompleted(personalBest))
+                
+                // Handle Beat the Clock specific completion
+                if completedSession.mode == .beatTheClock {
+                    let beatTheClockScore = beatTheClockService.calculateScore(session: completedSession)
+                    await send(.beatTheClockGameCompleted(beatTheClockScore))
+                } else {
+                    let personalBest = singleUserGameService.completeGame(session: &completedSession)
+                    await send(.singleUserGameCompleted(personalBest))
+                }
             }
         } else {
             // Load next question after a brief delay
@@ -502,9 +560,8 @@ struct GameFeature {
         case .beatTheClock:
             if session.isTimeExpired {
                 return .run { send in
-                    var expiredSession = session
-                    let personalBest = singleUserGameService.completeGame(session: &expiredSession)
-                    await send(.singleUserGameCompleted(personalBest))
+                    let beatTheClockScore = beatTheClockService.calculateScore(session: session)
+                    await send(.beatTheClockGameCompleted(beatTheClockScore))
                 }
             }
         case .speedrun:
