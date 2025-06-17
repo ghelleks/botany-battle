@@ -3,6 +3,12 @@ import ComposableArchitecture
 
 struct GameModeSelectionView: View {
     @Bindable var store: StoreOf<GameModeSelectionFeature>
+    let isAuthenticated: Bool
+    
+    init(store: StoreOf<GameModeSelectionFeature>, isAuthenticated: Bool = false) {
+        self.store = store
+        self.isAuthenticated = isAuthenticated
+    }
     
     var body: some View {
         ScrollView {
@@ -11,38 +17,62 @@ struct GameModeSelectionView: View {
                 VStack(spacing: 8) {
                     Text("Choose Game Mode")
                         .botanicalStyle(BotanicalTextStyle.largeTitle)
-                    Text("Select your preferred way to play")
+                    Text("Challenge yourself or compete with others")
                         .botanicalStyle(BotanicalTextStyle.subheadline)
                         .foregroundColor(.secondary)
                 }
                 .padding(.top)
                 
-                // Game Mode Cards
+                // Single-User Game Modes (Priority)
                 VStack(spacing: 16) {
+                    HStack {
+                        Text("Quick Play")
+                            .botanicalStyle(BotanicalTextStyle.headline)
+                        Spacer()
+                    }
+                    
+                    VStack(spacing: 12) {
+                        GameModeCard(
+                            mode: .beatTheClock,
+                            isSelected: store.selectedMode == .beatTheClock,
+                            personalBest: store.personalBestForSelectedMode,
+                            beatTheClockBest: store.beatTheClockBests[store.selectedDifficulty],
+                            isRecommended: true
+                        ) {
+                            store.send(.selectMode(.beatTheClock))
+                        }
+                        
+                        GameModeCard(
+                            mode: .speedrun,
+                            isSelected: store.selectedMode == .speedrun,
+                            personalBest: store.personalBestForSelectedMode,
+                            speedrunBest: store.speedrunBests[store.selectedDifficulty]
+                        ) {
+                            store.send(.selectMode(.speedrun))
+                        }
+                    }
+                }
+                
+                // Multiplayer Section (Optional/Secondary)
+                VStack(spacing: 16) {
+                    HStack {
+                        Text("Multiplayer")
+                            .botanicalStyle(BotanicalTextStyle.headline)
+                        Spacer()
+                        if !isAuthenticated {
+                            Text("Requires Game Center")
+                                .botanicalStyle(BotanicalTextStyle.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    
                     GameModeCard(
                         mode: .multiplayer,
                         isSelected: store.selectedMode == .multiplayer,
-                        personalBest: store.personalBestForSelectedMode
+                        personalBest: store.personalBestForSelectedMode,
+                        requiresAuth: !isAuthenticated
                     ) {
                         store.send(.selectMode(.multiplayer))
-                    }
-                    
-                    GameModeCard(
-                        mode: .beatTheClock,
-                        isSelected: store.selectedMode == .beatTheClock,
-                        personalBest: store.personalBestForSelectedMode,
-                        beatTheClockBest: store.beatTheClockBests[store.selectedDifficulty]
-                    ) {
-                        store.send(.selectMode(.beatTheClock))
-                    }
-                    
-                    GameModeCard(
-                        mode: .speedrun,
-                        isSelected: store.selectedMode == .speedrun,
-                        personalBest: store.personalBestForSelectedMode,
-                        speedrunBest: store.speedrunBests[store.selectedDifficulty]
-                    ) {
-                        store.send(.selectMode(.speedrun))
                     }
                 }
                 
@@ -99,7 +129,7 @@ struct GameModeSelectionView: View {
     private func startButtonTitle(for mode: GameMode) -> String {
         switch mode {
         case .multiplayer:
-            return "Find Opponent"
+            return "Connect & Play"
         case .beatTheClock:
             return "Start Beat the Clock"
         case .speedrun:
@@ -115,6 +145,8 @@ struct GameModeCard: View {
     let personalBest: PersonalBest?
     let beatTheClockBest: BeatTheClockScore?
     let speedrunBest: SpeedrunScore?
+    let isRecommended: Bool
+    let requiresAuth: Bool
     let action: () -> Void
     
     init(
@@ -123,6 +155,8 @@ struct GameModeCard: View {
         personalBest: PersonalBest? = nil,
         beatTheClockBest: BeatTheClockScore? = nil,
         speedrunBest: SpeedrunScore? = nil,
+        isRecommended: Bool = false,
+        requiresAuth: Bool = false,
         action: @escaping () -> Void
     ) {
         self.mode = mode
@@ -130,6 +164,8 @@ struct GameModeCard: View {
         self.personalBest = personalBest
         self.beatTheClockBest = beatTheClockBest
         self.speedrunBest = speedrunBest
+        self.isRecommended = isRecommended
+        self.requiresAuth = requiresAuth
         self.action = action
     }
     
@@ -141,14 +177,33 @@ struct GameModeCard: View {
                         HStack {
                             Image(systemName: iconName)
                                 .font(.title2)
-                                .foregroundColor(.botanicalGreen)
+                                .foregroundColor(requiresAuth ? .gray : .botanicalGreen)
                             
                             Text(mode.displayName)
                                 .botanicalStyle(BotanicalTextStyle.headline)
-                                .foregroundColor(.primary)
+                                .foregroundColor(requiresAuth ? .secondary : .primary)
+                            
+                            if isRecommended {
+                                Text("RECOMMENDED")
+                                    .botanicalStyle(BotanicalTextStyle.caption)
+                                    .fontWeight(.bold)
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 2)
+                                    .background(
+                                        Capsule()
+                                            .fill(Color.botanicalGreen)
+                                    )
+                            }
+                            
+                            if requiresAuth {
+                                Image(systemName: "lock.fill")
+                                    .font(.caption)
+                                    .foregroundColor(.orange)
+                            }
                         }
                         
-                        Text(mode.description)
+                        Text(requiresAuth ? "Connect with Game Center to unlock" : mode.description)
                             .botanicalStyle(BotanicalTextStyle.caption)
                             .foregroundColor(.secondary)
                             .multilineTextAlignment(.leading)
@@ -183,11 +238,11 @@ struct GameModeCard: View {
             .padding(16)
             .background(
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(Color(.systemBackground))
+                    .fill(requiresAuth ? Color(.systemGray6) : Color(.systemBackground))
                     .overlay(
                         RoundedRectangle(cornerRadius: 12)
                             .stroke(
-                                isSelected ? Color.botanicalGreen : Color(.systemGray4),
+                                isSelected ? Color.botanicalGreen : (requiresAuth ? Color.orange.opacity(0.3) : Color(.systemGray4)),
                                 lineWidth: isSelected ? 2 : 1
                             )
                     )
@@ -419,7 +474,8 @@ struct RecentGameCard: View {
             store: Store(
                 initialState: GameModeSelectionFeature.State(),
                 reducer: { GameModeSelectionFeature() }
-            )
+            ),
+            isAuthenticated: false
         )
         .navigationTitle("Game Modes")
         .navigationBarTitleDisplayMode(.inline)

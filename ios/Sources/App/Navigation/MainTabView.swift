@@ -72,7 +72,10 @@ struct GameView: View {
                 if store.showResults {
                     SingleUserGameResultsView(store: store)
                 } else if store.showModeSelection {
-                    GameModeSelectionView(store: store.scope(state: \.modeSelection, action: \.modeSelection))
+                    GameModeSelectionView(
+                        store: store.scope(state: \.modeSelection, action: \.modeSelection),
+                        isAuthenticated: appStore.isAuthenticated
+                    )
                 } else if store.currentGame == nil && store.singleUserSession == nil {
                     GameMenuView(
                         store: store,

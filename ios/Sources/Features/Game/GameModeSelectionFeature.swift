@@ -5,7 +5,7 @@ import ComposableArchitecture
 struct GameModeSelectionFeature {
     @ObservableState
     struct State: Equatable {
-        var selectedMode: GameMode = .multiplayer
+        var selectedMode: GameMode = .beatTheClock
         var selectedDifficulty: Game.Difficulty = .medium
         var showDifficultySelection = false
         var personalBests: [PersonalBest] = []
@@ -74,6 +74,8 @@ struct GameModeSelectionFeature {
             case .selectMode(let mode):
                 state.selectedMode = mode
                 state.showDifficultySelection = mode != .multiplayer
+                // Clear any errors when changing modes
+                state.error = nil
                 return .none
                 
             case .selectDifficulty(let difficulty):
@@ -88,9 +90,11 @@ struct GameModeSelectionFeature {
                 guard state.canStartGame else { return .none }
                 
                 state.isLoading = true
+                state.error = nil
                 
                 switch state.selectedMode {
                 case .multiplayer:
+                    // Multiplayer requires authentication - delegate will handle this
                     return .send(.delegate(.startMultiplayerGame(state.selectedDifficulty)))
                 case .beatTheClock:
                     return .send(.delegate(.startBeatTheClockGame(state.selectedDifficulty)))
