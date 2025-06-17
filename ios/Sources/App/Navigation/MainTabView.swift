@@ -228,32 +228,63 @@ struct GameWaitingView: View {
 struct GamePlayView: View {
     let store: StoreOf<GameFeature>
     let round: Round
+    @State private var showStats = false
     
     var body: some View {
-        VStack(spacing: 0) {
-            // Game Progress Header
-            GameProgressHeader(
-                currentRound: round.roundNumber,
-                totalRounds: store.currentGame?.totalRounds ?? 5,
-                timeRemaining: store.timeRemaining
-            )
-            
-            // Plant Image
-            PlantImageView(plant: round.plant)
-                .frame(maxHeight: .infinity)
-            
-            // Answer Options
-            AnswerOptionsView(
-                options: round.options,
-                selectedAnswer: store.selectedAnswer,
-                hasAnswered: store.hasAnswered,
-                canAnswer: store.canAnswer
-            ) { answer in
-                store.send(.submitAnswer(answer))
+        ZStack {
+            VStack(spacing: 0) {
+                // Enhanced Game Progress Header
+                GameProgressHeader(
+                    currentRound: round.roundNumber,
+                    totalRounds: store.currentGame?.totalRounds ?? 5,
+                    timeRemaining: store.timeRemaining,
+                    mode: .multiplayer,
+                    difficulty: store.selectedDifficulty,
+                    score: store.currentScore,
+                    correctAnswers: store.currentGame?.players.first?.correctAnswers,
+                    onLeave: { store.send(.leaveGame) }
+                )
+                
+                // Enhanced Plant Image
+                PlantImageView(plant: round.plant, mode: .multiplayer)
+                    .frame(maxHeight: .infinity)
+                
+                // Enhanced Answer Options
+                AnswerOptionsView(
+                    options: round.options,
+                    selectedAnswer: store.selectedAnswer,
+                    hasAnswered: store.hasAnswered,
+                    canAnswer: store.canAnswer,
+                    correctAnswer: store.hasAnswered ? round.plant.primaryCommonName : nil,
+                    mode: .multiplayer,
+                    timeRemaining: store.timeRemaining
+                ) { answer in
+                    store.send(.submitAnswer(answer))
+                }
+                .padding()
             }
-            .padding()
+            .background(Color(.systemBackground))
+            
+            // Stats overlay
+            if showStats {
+                GameStatsOverlay(
+                    session: nil,
+                    game: store.currentGame,
+                    mode: .multiplayer,
+                    isVisible: showStats
+                ) {
+                    showStats = false
+                }
+            }
         }
-        .background(Color(.systemBackground))
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button(action: { showStats = true }) {
+                    Image(systemName: "chart.bar.fill")
+                        .foregroundColor(.botanicalGreen)
+                }
+            }
+        }
     }
 }
 

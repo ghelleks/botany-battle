@@ -4,39 +4,74 @@ import ComposableArchitecture
 struct SingleUserGameView: View {
     let store: StoreOf<GameFeature>
     let session: SingleUserGameSession
+    @State private var showStats = false
     
     var body: some View {
-        VStack(spacing: 0) {
-            // Game Header
-            SingleUserGameHeader(
-                session: session,
-                timeRemaining: store.timeRemaining,
-                gameProgress: store.gameProgress,
-                onPause: { store.send(.pauseGame) },
-                onResume: { store.send(.resumeGame) },
-                onLeave: { store.send(.leaveGame) }
-            )
-            
-            // Plant Question Area
-            if let question = store.currentQuestion {
-                PlantQuestionView(
-                    plant: question.plant,
-                    options: question.options,
-                    selectedAnswer: store.selectedAnswer,
-                    hasAnswered: store.hasAnswered,
-                    canAnswer: store.canAnswer,
-                    mode: session.mode
-                ) { answer in
-                    store.send(.submitAnswer(answer))
+        ZStack {
+            VStack(spacing: 0) {
+                // Enhanced Game Progress Header
+                GameProgressHeader(
+                    currentRound: session.questionsAnswered,
+                    totalRounds: session.mode.totalQuestions == Int.max ? session.questionsAnswered + 1 : session.mode.totalQuestions,
+                    timeRemaining: store.timeRemaining,
+                    mode: session.mode,
+                    difficulty: session.difficulty,
+                    score: session.score,
+                    correctAnswers: session.correctAnswers,
+                    onLeave: { store.send(.leaveGame) },
+                    onPause: store.isPaused ? { store.send(.resumeGame) } : { store.send(.pauseGame) }
+                )
+                
+                // Enhanced Plant Question Area
+                if let question = store.currentQuestion {
+                    VStack(spacing: 0) {
+                        // Enhanced Plant Image
+                        PlantImageView(plant: question.plant, mode: session.mode)
+                            .frame(maxHeight: .infinity)
+                        
+                        // Enhanced Answer Options
+                        AnswerOptionsView(
+                            options: question.options,
+                            selectedAnswer: store.selectedAnswer,
+                            hasAnswered: store.hasAnswered,
+                            canAnswer: store.canAnswer,
+                            correctAnswer: store.hasAnswered ? question.plant.primaryCommonName : nil,
+                            mode: session.mode,
+                            timeRemaining: store.timeRemaining
+                        ) { answer in
+                            store.send(.submitAnswer(answer))
+                        }
+                        .padding()
+                    }
+                } else {
+                    LoadingQuestionView(mode: session.mode)
                 }
-            } else {
-                LoadingQuestionView(mode: session.mode)
+                
+                // Enhanced Game Stats Footer
+                EnhancedGameStatsFooter(session: session)
             }
+            .background(Color(.systemBackground))
             
-            // Game Stats Footer
-            SingleUserGameStats(session: session)
+            // Stats overlay
+            if showStats {
+                GameStatsOverlay(
+                    session: session,
+                    game: nil,
+                    mode: session.mode,
+                    isVisible: showStats
+                ) {
+                    showStats = false
+                }
+            }
         }
-        .background(Color(.systemBackground))
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button(action: { showStats = true }) {
+                    Image(systemName: "chart.bar.fill")
+                        .foregroundColor(.botanicalGreen)
+                }
+            }
+        }
         .alert("Game Paused", isPresented: .constant(store.isPaused)) {
             Button("Resume") {
                 store.send(.resumeGame)
@@ -347,6 +382,181 @@ struct LoadingQuestionView: View {
             Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
+// MARK: - Enhanced Game Stats Footer
+struct EnhancedGameStatsFooter: View {
+    let session: SingleUserGameSession
+    @State private var animateStats = false
+    
+    var body: some View {
+        VStack(spacing: 12) {
+            // Primary Stats Row
+            HStack(spacing: 20) {
+                StatItem(
+                    title: "Score",
+                    value: "\(session.score)",
+                    icon: "star.fill",
+                    color: .orange
+                )
+                
+                StatItem(
+                    title: "Accuracy",
+                    value: String(format: "%.1f%%", session.accuracy * 100),
+                    icon: "target",
+                    color: accuracyColor
+                )
+                
+                StatItem(
+                    title: "Streak",
+                    value: "\(currentStreak)",
+                    icon: "flame.fill",
+                    color: streakColor
+                )
+                
+                StatItem(
+                    title: modeSpecificTitle,
+                    value: modeSpecificValue,
+                    icon: modeSpecificIcon,
+                    color: modeSpecificColor
+                )
+            }
+            
+            // Progress Bar for completion
+            if session.mode == .speedrun {
+                VStack(spacing: 4) {
+                    HStack {
+                        Text("Progress")
+                            .botanicalStyle(BotanicalTextStyle.caption)
+                            .foregroundColor(.secondary)
+                        
+                        Spacer()
+                        
+                        Text("\(session.questionsAnswered)/25")
+                            .botanicalStyle(BotanicalTextStyle.caption)
+                            .fontWeight(.semibold)
+                            .fontDesign(.monospaced)
+                    }
+                    
+                    GeometryReader { geometry in
+                        ZStack(alignment: .leading) {
+                            Rectangle()
+                                .fill(Color(.systemGray5))
+                                .frame(height: 4)
+                                .cornerRadius(2)
+                            
+                            Rectangle()
+                                .fill(LinearGradient(
+                                    gradient: Gradient(colors: [.blue, .green]),
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                ))
+                                .frame(
+                                    width: geometry.size.width * (Double(session.questionsAnswered) / 25.0),
+                                    height: 4
+                                )
+                                .cornerRadius(2)
+                                .animation(.easeInOut(duration: 0.3), value: session.questionsAnswered)
+                        }
+                    }
+                    .frame(height: 4)
+                }
+            }
+        }
+        .padding()
+        .background(
+            LinearGradient(
+                gradient: Gradient(colors: [
+                    Color(.systemGray6),
+                    Color(.systemGray6).opacity(0.8)
+                ]),
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        )
+        .overlay(
+            Rectangle()
+                .fill(Color(.systemGray4))
+                .frame(height: 0.5),
+            alignment: .top
+        )
+        .scaleEffect(animateStats ? 1.02 : 1.0)
+        .animation(.easeInOut(duration: 0.2), value: animateStats)
+        .onChange(of: session.correctAnswers) { _, _ in
+            // Animate when score changes
+            withAnimation(.easeInOut(duration: 0.2)) {
+                animateStats = true
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                animateStats = false
+            }
+        }
+    }
+    
+    private var currentStreak: Int {
+        var streak = 0
+        for answer in session.answers.reversed() {
+            if answer.isCorrect {
+                streak += 1
+            } else {
+                break
+            }
+        }
+        return streak
+    }
+    
+    private var accuracyColor: Color {
+        let accuracy = session.accuracy
+        if accuracy >= 0.9 { return .green }
+        else if accuracy >= 0.7 { return .blue }
+        else if accuracy >= 0.5 { return .orange }
+        else { return .red }
+    }
+    
+    private var streakColor: Color {
+        let streak = currentStreak
+        if streak >= 10 { return .red }
+        else if streak >= 5 { return .orange }
+        else if streak >= 3 { return .yellow }
+        else { return .gray }
+    }
+    
+    private var modeSpecificTitle: String {
+        switch session.mode {
+        case .beatTheClock: return "Rate"
+        case .speedrun: return "Avg Time"
+        case .multiplayer: return "Bonus"
+        }
+    }
+    
+    private var modeSpecificValue: String {
+        switch session.mode {
+        case .beatTheClock:
+            let rate = session.totalGameTime > 0 ? (Double(session.correctAnswers) / session.totalGameTime) * 60 : 0
+            return String(format: "%.1f/min", rate)
+        case .speedrun:
+            let avgTime = session.questionsAnswered > 0 ? session.totalGameTime / Double(session.questionsAnswered) : 0
+            return String(format: "%.1fs", avgTime)
+        case .multiplayer:
+            return "N/A"
+        }
+    }
+    
+    private var modeSpecificIcon: String {
+        switch session.mode {
+        case .beatTheClock: return "speedometer"
+        case .speedrun: return "stopwatch"
+        case .multiplayer: return "gift"
+        }
+    }
+    
+    private var modeSpecificColor: Color {
+        switch session.mode {
+        case .beatTheClock: return .orange
+        case .speedrun: return .blue
+        case .multiplayer: return .purple
+        }
     }
 }
 
