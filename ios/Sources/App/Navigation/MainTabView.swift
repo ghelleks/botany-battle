@@ -56,7 +56,9 @@ struct GameView: View {
     var body: some View {
         NavigationStack {
             Group {
-                if store.showModeSelection {
+                if store.showResults {
+                    SingleUserGameResultsView(store: store)
+                } else if store.showModeSelection {
                     GameModeSelectionView(store: store.scope(state: \.modeSelection, action: \.modeSelection))
                 } else if store.currentGame == nil && store.singleUserSession == nil {
                     GameMenuView(store: store)
@@ -526,6 +528,121 @@ struct SettingsView: View {
                 Text(store.error ?? "")
             }
         }
+    }
+}
+
+// MARK: - Single User Game Results View
+struct SingleUserGameResultsView: View {
+    let store: StoreOf<GameFeature>
+    
+    var body: some View {
+        Group {
+            if let beatTheClockScore = store.beatTheClockScore {
+                GameResultsScreen(
+                    session: createSessionFromBeatTheClockScore(beatTheClockScore),
+                    finalScore: beatTheClockScore,
+                    personalBest: store.beatTheClockPersonalBest.map { createPersonalBestFromBeatTheClockScore($0) },
+                    isNewPersonalBest: isNewBeatTheClockRecord(beatTheClockScore),
+                    trophiesEarned: store.trophyReward?.totalTrophies ?? 0,
+                    onPlayAgain: {
+                        store.send(.hideGameResults)
+                        store.send(.startSingleUserGame(.beatTheClock, beatTheClockScore.difficulty))
+                    },
+                    onReturnToMenu: {
+                        store.send(.hideGameResults)
+                        store.send(.showModeSelection(true))
+                    },
+                    onViewLeaderboard: {
+                        // TODO: Navigate to leaderboard
+                    }
+                )
+            } else if let speedrunScore = store.speedrunScore {
+                GameResultsScreen(
+                    session: createSessionFromSpeedrunScore(speedrunScore),
+                    finalScore: speedrunScore,
+                    personalBest: store.speedrunPersonalBest.map { createPersonalBestFromSpeedrunScore($0) },
+                    isNewPersonalBest: isNewSpeedrunRecord(speedrunScore),
+                    trophiesEarned: store.trophyReward?.totalTrophies ?? 0,
+                    onPlayAgain: {
+                        store.send(.hideGameResults)
+                        store.send(.startSingleUserGame(.speedrun, speedrunScore.difficulty))
+                    },
+                    onReturnToMenu: {
+                        store.send(.hideGameResults)
+                        store.send(.showModeSelection(true))
+                    },
+                    onViewLeaderboard: {
+                        // TODO: Navigate to leaderboard
+                    }
+                )
+            } else {
+                // Fallback for missing results data
+                VStack(spacing: 20) {
+                    Text("Game Complete!")
+                        .botanicalStyle(BotanicalTextStyle.largeTitle)
+                    
+                    BotanicalButton("Return to Menu", style: .primary, size: .large) {
+                        store.send(.hideGameResults)
+                        store.send(.showModeSelection(true))
+                    }
+                }
+                .padding()
+            }
+        }
+    }
+    
+    private func createSessionFromBeatTheClockScore(_ score: BeatTheClockScore) -> SingleUserGameSession {
+        var session = SingleUserGameSession(mode: .beatTheClock, difficulty: score.difficulty)
+        session.correctAnswers = score.correctAnswers
+        session.questionsAnswered = score.totalAnswers
+        session.totalGameTime = score.timeUsed
+        session.state = .completed
+        return session
+    }
+    
+    private func createSessionFromSpeedrunScore(_ score: SpeedrunScore) -> SingleUserGameSession {
+        var session = SingleUserGameSession(mode: .speedrun, difficulty: score.difficulty)
+        session.correctAnswers = score.correctAnswers
+        session.questionsAnswered = score.totalQuestions
+        session.totalGameTime = score.completionTime
+        session.state = .completed
+        return session
+    }
+    
+    private func createPersonalBestFromBeatTheClockScore(_ score: BeatTheClockScore) -> PersonalBest {
+        return PersonalBest(
+            id: UUID().uuidString,
+            mode: .beatTheClock,
+            difficulty: score.difficulty,
+            score: score.correctAnswers * 10, // Convert to points
+            correctAnswers: score.correctAnswers,
+            totalGameTime: score.timeUsed,
+            accuracy: score.accuracy,
+            achievedAt: score.achievedAt
+        )
+    }
+    
+    private func createPersonalBestFromSpeedrunScore(_ score: SpeedrunScore) -> PersonalBest {
+        return PersonalBest(
+            id: UUID().uuidString,
+            mode: .speedrun,
+            difficulty: score.difficulty,
+            score: Int(score.rating),
+            correctAnswers: score.correctAnswers,
+            totalGameTime: score.completionTime,
+            accuracy: Double(score.correctAnswers) / Double(score.totalQuestions),
+            achievedAt: score.achievedAt
+        )
+    }
+    
+    private func isNewBeatTheClockRecord(_ score: BeatTheClockScore) -> Bool {
+        guard let personalBest = store.beatTheClockPersonalBest else { return true }
+        return score.correctAnswers > personalBest.correctAnswers
+    }
+    
+    private func isNewSpeedrunRecord(_ score: SpeedrunScore) -> Bool {
+        guard let personalBest = store.speedrunPersonalBest else { return true }
+        return score.rating > personalBest.rating
     }
 }
 

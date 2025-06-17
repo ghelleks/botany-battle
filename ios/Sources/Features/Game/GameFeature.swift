@@ -30,6 +30,8 @@ struct GameFeature {
         var personalBests: [PersonalBest] = []
         var newPersonalBest: PersonalBest?
         var isPaused = false
+        var showResults = false
+        var trophyReward: TrophyReward?
         
         // Beat the Clock specific state
         var beatTheClockScore: BeatTheClockScore?
@@ -134,6 +136,8 @@ struct GameFeature {
         case pauseGame
         case resumeGame
         case singleUserGameCompleted(PersonalBest?)
+        case showGameResults
+        case hideGameResults
         
         // Beat the Clock specific actions
         case beatTheClockGameCompleted(BeatTheClockScore)
@@ -170,6 +174,7 @@ struct GameFeature {
     @Dependency(\.gameTimerPersistenceService) var gameTimerPersistenceService
     @Dependency(\.beatTheClockService) var beatTheClockService
     @Dependency(\.speedrunService) var speedrunService
+    @Dependency(\.trophyService) var trophyService
     @Dependency(\.continuousClock) var clock
     
     enum CancelID { 
@@ -480,20 +485,29 @@ struct GameFeature {
             // MARK: - Beat the Clock Actions
             case .beatTheClockGameCompleted(let score):
                 state.beatTheClockScore = score
-                state.singleUserSession = nil
+                let session = state.singleUserSession
                 state.currentQuestion = nil
                 state.isPaused = false
                 gameTimerService.stopTimer()
+                
+                // Calculate trophy reward
+                if let completedSession = session {
+                    state.trophyReward = trophyService.awardTrophiesForSession(completedSession)
+                }
                 
                 // Save the score
                 if let service = beatTheClockService as? BeatTheClockService {
                     service.saveScore(score)
                 }
                 
+                // Clear session only after we have the results
+                state.singleUserSession = nil
+                
                 return .concatenate(
                     .cancel(id: CancelID.gameTimer),
                     .send(.loadBeatTheClockPersonalBest(score.difficulty)),
-                    .send(.loadBeatTheClockLeaderboard(score.difficulty))
+                    .send(.loadBeatTheClockLeaderboard(score.difficulty)),
+                    .send(.showGameResults)
                 )
                 
             case .loadBeatTheClockPersonalBest(let difficulty):
@@ -519,20 +533,29 @@ struct GameFeature {
             // MARK: - Speedrun Actions
             case .speedrunGameCompleted(let score):
                 state.speedrunScore = score
-                state.singleUserSession = nil
+                let session = state.singleUserSession
                 state.currentQuestion = nil
                 state.isPaused = false
                 gameTimerService.stopTimer()
+                
+                // Calculate trophy reward
+                if let completedSession = session {
+                    state.trophyReward = trophyService.awardTrophiesForSession(completedSession)
+                }
                 
                 // Save the score
                 if let service = speedrunService as? SpeedrunService {
                     service.saveScore(score)
                 }
                 
+                // Clear session only after we have the results
+                state.singleUserSession = nil
+                
                 return .concatenate(
                     .cancel(id: CancelID.gameTimer),
                     .send(.loadSpeedrunPersonalBest(score.difficulty)),
-                    .send(.loadSpeedrunLeaderboard(score.difficulty))
+                    .send(.loadSpeedrunLeaderboard(score.difficulty)),
+                    .send(.showGameResults)
                 )
                 
             case .loadSpeedrunPersonalBest(let difficulty):
@@ -553,6 +576,19 @@ struct GameFeature {
                 
             case .speedrunLeaderboardLoaded(let leaderboard):
                 state.speedrunLeaderboard = leaderboard
+                return .none
+                
+            // MARK: - Results Actions
+            case .showGameResults:
+                state.showResults = true
+                return .none
+                
+            case .hideGameResults:
+                state.showResults = false
+                state.trophyReward = nil
+                state.beatTheClockScore = nil
+                state.speedrunScore = nil
+                state.newPersonalBest = nil
                 return .none
             }
         }
