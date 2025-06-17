@@ -56,10 +56,14 @@ struct GameView: View {
     var body: some View {
         NavigationStack {
             Group {
-                if store.currentGame == nil {
+                if store.showModeSelection {
+                    GameModeSelectionView(store: store.scope(state: \.modeSelection, action: \.modeSelection))
+                } else if store.currentGame == nil && store.singleUserSession == nil {
                     GameMenuView(store: store)
                 } else if store.isSearchingForGame {
                     GameSearchingView(store: store)
+                } else if let session = store.singleUserSession {
+                    SingleUserGameView(store: store, session: session)
                 } else if let game = store.currentGame {
                     if game.state == .waiting {
                         GameWaitingView(store: store)

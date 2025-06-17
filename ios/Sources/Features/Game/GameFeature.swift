@@ -5,6 +5,10 @@ import ComposableArchitecture
 struct GameFeature {
     @ObservableState
     struct State: Equatable {
+        // Mode selection state
+        var modeSelection = GameModeSelectionFeature.State()
+        var showModeSelection = true
+        
         // Common state for all game modes
         var selectedGameMode: GameMode = .multiplayer
         var selectedDifficulty: Game.Difficulty = .medium
@@ -108,6 +112,8 @@ struct GameFeature {
     
     enum Action {
         // Mode selection
+        case modeSelection(GameModeSelectionFeature.Action)
+        case showModeSelection(Bool)
         case selectGameMode(GameMode)
         case selectDifficulty(Game.Difficulty)
         
@@ -174,9 +180,38 @@ struct GameFeature {
     }
     
     var body: some ReducerOf<Self> {
+        Scope(state: \.modeSelection, action: \.modeSelection) {
+            GameModeSelectionFeature()
+        }
+        
         Reduce { state, action in
             switch action {
             // MARK: - Mode Selection
+            case .modeSelection(.delegate(.startMultiplayerGame(let difficulty))):
+                state.selectedGameMode = .multiplayer
+                state.selectedDifficulty = difficulty
+                state.showModeSelection = false
+                return .send(.searchForMultiplayerGame(difficulty))
+                
+            case .modeSelection(.delegate(.startBeatTheClockGame(let difficulty))):
+                state.selectedGameMode = .beatTheClock
+                state.selectedDifficulty = difficulty
+                state.showModeSelection = false
+                return .send(.startSingleUserGame(.beatTheClock, difficulty))
+                
+            case .modeSelection(.delegate(.startSpeedrunGame(let difficulty))):
+                state.selectedGameMode = .speedrun
+                state.selectedDifficulty = difficulty
+                state.showModeSelection = false
+                return .send(.startSingleUserGame(.speedrun, difficulty))
+                
+            case .modeSelection:
+                return .none
+                
+            case .showModeSelection(let show):
+                state.showModeSelection = show
+                return .none
+                
             case .selectGameMode(let mode):
                 state.selectedGameMode = mode
                 return .none
@@ -347,6 +382,7 @@ struct GameFeature {
                 state.selectedAnswer = nil
                 state.isPaused = false
                 state.newPersonalBest = nil
+                state.showModeSelection = true
                 gameTimerService.stopTimer()
                 
                 return .concatenate(
