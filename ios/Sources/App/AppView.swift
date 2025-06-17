@@ -6,10 +6,10 @@ struct AppView: View {
     
     var body: some View {
         Group {
-            if store.auth.isAuthenticated {
-                MainTabView(store: store)
-            } else {
+            if store.showAuthenticationView {
                 AuthenticationView(store: store.scope(state: \.auth, action: \.auth))
+            } else {
+                MainTabView(store: store)
             }
         }
         .onAppear {
