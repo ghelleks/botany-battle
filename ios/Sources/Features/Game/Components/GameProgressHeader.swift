@@ -45,6 +45,8 @@ struct GameProgressHeader: View {
                             .font(.title2)
                             .foregroundColor(.gray)
                     }
+                    .gameControlAccessibility(action: "Leave Game")
+                    .accessibilityHint("Double tap to leave the current game and return to the main menu")
                 } else {
                     Spacer().frame(width: 24)
                 }
@@ -85,6 +87,11 @@ struct GameProgressHeader: View {
                     Text(progressText)
                         .botanicalStyle(BotanicalTextStyle.caption)
                         .foregroundColor(.secondary)
+                        .progressAccessibility(
+                            current: currentRound,
+                            total: totalRounds,
+                            mode: mode ?? .multiplayer
+                        )
                     
                     // Progress Bar
                     GeometryReader { geometry in
@@ -108,7 +115,7 @@ struct GameProgressHeader: View {
                 VStack(alignment: .trailing, spacing: 4) {
                     HStack(spacing: 12) {
                         // Score (if available)
-                        if let score = score {
+                        if let score = score, let correctAnswers = correctAnswers, let mode = mode {
                             VStack(alignment: .trailing, spacing: 2) {
                                 Text("Score")
                                     .botanicalStyle(BotanicalTextStyle.caption)
@@ -118,6 +125,12 @@ struct GameProgressHeader: View {
                                     .fontWeight(.semibold)
                                     .fontDesign(.monospaced)
                             }
+                            .scoreAccessibility(
+                                score: score,
+                                correctAnswers: correctAnswers,
+                                totalAnswers: currentRound,
+                                mode: mode
+                            )
                         }
                         
                         // Timer
@@ -131,6 +144,11 @@ struct GameProgressHeader: View {
                                 .fontDesign(.monospaced)
                                 .foregroundColor(timerColor)
                         }
+                        .timerAccessibility(
+                            timeRemaining: timeRemaining,
+                            mode: mode ?? .multiplayer,
+                            isUrgent: timeRemaining <= 10
+                        )
                     }
                 }
             }

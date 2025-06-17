@@ -65,6 +65,11 @@ struct GameResultsScreen: View {
                         onReturnToMenu: onReturnToMenu,
                         onViewLeaderboard: onViewLeaderboard
                     )
+                    .resultsScreenAccessibilityActions(
+                        onPlayAgain: onPlayAgain,
+                        onReturnToMenu: onReturnToMenu,
+                        onViewLeaderboard: onViewLeaderboard
+                    )
                     
                     Spacer(minLength: 50)
                 }

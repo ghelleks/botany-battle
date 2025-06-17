@@ -322,6 +322,13 @@ struct AnswerOptionButton: View {
         }
         .buttonStyle(PlainButtonStyle())
         .disabled(!isEnabled)
+        .answerOptionAccessibility(
+            option: text,
+            isSelected: state == .selected,
+            isCorrect: state == .correct ? true : nil,
+            isWrong: state == .incorrect ? true : nil,
+            hasAnswered: state == .correct || state == .incorrect
+        )
         .onAppear {
             DispatchQueue.main.asyncAfter(deadline: .now() + animationDelay) {
                 withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
