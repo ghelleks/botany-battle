@@ -136,6 +136,8 @@ struct GameFeature {
     @Dependency(\.singleUserGameService) var singleUserGameService
     @Dependency(\.personalBestService) var personalBestService
     @Dependency(\.gameTimerService) var gameTimerService
+    @Dependency(\.gameTimerValidationService) var gameTimerValidationService
+    @Dependency(\.gameTimerPersistenceService) var gameTimerPersistenceService
     @Dependency(\.continuousClock) var clock
     
     enum CancelID { 
@@ -338,13 +340,32 @@ struct GameFeature {
             case .timerUpdate(let update):
                 guard let session = state.singleUserSession else { return .none }
                 
-                state.totalGameTime = update.totalTime
-                state.gameTimeRemaining = update.timeRemaining ?? update.totalTime
+                // Validate timer update
+                let validation = gameTimerValidationService.validateTimerState(session: session, timerUpdate: update)
+                
+                // Use adjusted time if validation suggests it
+                let finalTime = validation.adjustedTime ?? update.totalTime
+                
+                state.totalGameTime = finalTime
+                state.gameTimeRemaining = update.timeRemaining ?? finalTime
                 
                 // Update session with current timing
                 var updatedSession = session
                 updatedSession.totalPausedTime = update.pausedTime
                 state.singleUserSession = updatedSession
+                
+                // Save timer state for recovery
+                let persistenceState = TimerPersistenceState(
+                    sessionId: session.id,
+                    mode: session.mode,
+                    startTime: session.startedAt,
+                    totalPausedTime: update.pausedTime,
+                    wasActive: session.state == .active,
+                    lastSaveTime: Date(),
+                    questionsAnswered: session.questionsAnswered,
+                    correctAnswers: session.correctAnswers
+                )
+                gameTimerPersistenceService.saveTimerState(persistenceState)
                 
                 // Check if time expired for Beat the Clock
                 if update.isExpired && session.mode == .beatTheClock {
@@ -353,6 +374,11 @@ struct GameFeature {
                         let personalBest = singleUserGameService.completeGame(session: &expiredSession)
                         await send(.singleUserGameCompleted(personalBest))
                     }
+                }
+                
+                // Log warnings if validation found issues
+                if !validation.isValid {
+                    print("Timer validation warnings: \(validation.warnings)")
                 }
                 
                 return .none

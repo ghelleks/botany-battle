@@ -27,6 +27,8 @@ final class GameTimerService: GameTimerServiceProtocol {
     private var pausedAt: Date?
     private var totalPausedTime: TimeInterval = 0
     private var isActive = false
+    private var lastUpdateTime: Date?
+    private var backgroundStartTime: Date?
     
     init() {
         setupAppLifecycleObservers()
@@ -104,6 +106,9 @@ final class GameTimerService: GameTimerServiceProtocol {
     private func timerTick() {
         guard let mode = gameMode, isActive else { return }
         
+        let now = Date()
+        lastUpdateTime = now
+        
         let currentTime = getCurrentTime()
         var timeRemaining: TimeInterval?
         var isExpired = false
@@ -162,12 +167,28 @@ final class GameTimerService: GameTimerServiceProtocol {
     }
     
     @objc private func appDidEnterBackground() {
+        backgroundStartTime = Date()
         if isActive && pausedAt == nil {
             pauseTimer()
         }
     }
     
     @objc private func appWillEnterForeground() {
+        // Handle potential time discrepancies from background
+        if let backgroundStart = backgroundStartTime {
+            let backgroundDuration = Date().timeIntervalSince(backgroundStart)
+            
+            // If app was in background for more than 30 seconds, keep the pause
+            if backgroundDuration > 30.0 && isActive {
+                // Timer is already paused, but update total paused time to account for background time
+                if pausedAt != nil {
+                    totalPausedTime += backgroundDuration
+                }
+            }
+        }
+        
+        backgroundStartTime = nil
+        
         if isActive && pausedAt != nil {
             resumeTimer()
         }
