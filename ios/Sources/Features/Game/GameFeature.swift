@@ -32,6 +32,11 @@ struct GameFeature {
         var beatTheClockPersonalBest: BeatTheClockScore?
         var beatTheClockLeaderboard: [BeatTheClockScore] = []
         
+        // Speedrun specific state
+        var speedrunScore: SpeedrunScore?
+        var speedrunPersonalBest: SpeedrunScore?
+        var speedrunLeaderboard: [SpeedrunScore] = []
+        
         // Computed properties that work for both modes
         var currentMode: GameMode {
             return singleUserSession?.mode ?? currentGame?.mode ?? selectedGameMode
@@ -131,6 +136,13 @@ struct GameFeature {
         case loadBeatTheClockLeaderboard(Game.Difficulty)
         case beatTheClockLeaderboardLoaded([BeatTheClockScore])
         
+        // Speedrun specific actions
+        case speedrunGameCompleted(SpeedrunScore)
+        case loadSpeedrunPersonalBest(Game.Difficulty)
+        case speedrunPersonalBestLoaded(SpeedrunScore?)
+        case loadSpeedrunLeaderboard(Game.Difficulty)
+        case speedrunLeaderboardLoaded([SpeedrunScore])
+        
         // Common actions
         case submitAnswer(String)
         case leaveGame
@@ -151,6 +163,7 @@ struct GameFeature {
     @Dependency(\.gameTimerValidationService) var gameTimerValidationService
     @Dependency(\.gameTimerPersistenceService) var gameTimerPersistenceService
     @Dependency(\.beatTheClockService) var beatTheClockService
+    @Dependency(\.speedrunService) var speedrunService
     @Dependency(\.continuousClock) var clock
     
     enum CancelID { 
@@ -466,6 +479,45 @@ struct GameFeature {
             case .beatTheClockLeaderboardLoaded(let leaderboard):
                 state.beatTheClockLeaderboard = leaderboard
                 return .none
+                
+            // MARK: - Speedrun Actions
+            case .speedrunGameCompleted(let score):
+                state.speedrunScore = score
+                state.singleUserSession = nil
+                state.currentQuestion = nil
+                state.isPaused = false
+                gameTimerService.stopTimer()
+                
+                // Save the score
+                if let service = speedrunService as? SpeedrunService {
+                    service.saveScore(score)
+                }
+                
+                return .concatenate(
+                    .cancel(id: CancelID.gameTimer),
+                    .send(.loadSpeedrunPersonalBest(score.difficulty)),
+                    .send(.loadSpeedrunLeaderboard(score.difficulty))
+                )
+                
+            case .loadSpeedrunPersonalBest(let difficulty):
+                return .run { send in
+                    let personalBest = speedrunService.getBestScore(for: difficulty)
+                    await send(.speedrunPersonalBestLoaded(personalBest))
+                }
+                
+            case .speedrunPersonalBestLoaded(let personalBest):
+                state.speedrunPersonalBest = personalBest
+                return .none
+                
+            case .loadSpeedrunLeaderboard(let difficulty):
+                return .run { send in
+                    let leaderboard = speedrunService.getLeaderboard(for: difficulty)
+                    await send(.speedrunLeaderboardLoaded(leaderboard))
+                }
+                
+            case .speedrunLeaderboardLoaded(let leaderboard):
+                state.speedrunLeaderboard = leaderboard
+                return .none
             }
         }
     }
@@ -514,11 +566,15 @@ struct GameFeature {
             return .run { send in
                 var completedSession = session
                 
-                // Handle Beat the Clock specific completion
-                if completedSession.mode == .beatTheClock {
+                // Handle mode-specific completion
+                switch completedSession.mode {
+                case .beatTheClock:
                     let beatTheClockScore = beatTheClockService.calculateScore(session: completedSession)
                     await send(.beatTheClockGameCompleted(beatTheClockScore))
-                } else {
+                case .speedrun:
+                    let speedrunScore = speedrunService.calculateScore(session: completedSession)
+                    await send(.speedrunGameCompleted(speedrunScore))
+                case .multiplayer:
                     let personalBest = singleUserGameService.completeGame(session: &completedSession)
                     await send(.singleUserGameCompleted(personalBest))
                 }
@@ -567,9 +623,8 @@ struct GameFeature {
         case .speedrun:
             if session.questionsAnswered >= 25 {
                 return .run { send in
-                    var completedSession = session
-                    let personalBest = singleUserGameService.completeGame(session: &completedSession)
-                    await send(.singleUserGameCompleted(personalBest))
+                    let speedrunScore = speedrunService.calculateScore(session: session)
+                    await send(.speedrunGameCompleted(speedrunScore))
                 }
             }
         case .multiplayer:
