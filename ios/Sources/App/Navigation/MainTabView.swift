@@ -9,6 +9,7 @@ struct MainTabView: View {
             get: { store.currentTab },
             set: { store.send(.tabChanged($0)) }
         )) {
+            // Game tab - always available
             GameView(store: store.scope(state: \.game, action: \.game))
                 .tabItem {
                     Image(systemName: "gamecontroller.fill")
@@ -16,13 +17,17 @@ struct MainTabView: View {
                 }
                 .tag(AppFeature.State.Tab.game)
             
-            ProfileView(store: store.scope(state: \.profile, action: \.profile))
-                .tabItem {
-                    Image(systemName: "person.fill")
-                    Text("Profile")
-                }
-                .tag(AppFeature.State.Tab.profile)
+            // Profile tab - conditional on authentication or preference
+            if store.availableTabs.contains(.profile) {
+                ProfileView(store: store.scope(state: \.profile, action: \.profile))
+                    .tabItem {
+                        Image(systemName: store.isAuthenticated ? "person.fill" : "person.badge.plus")
+                        Text(store.isAuthenticated ? "Profile" : "Connect")
+                    }
+                    .tag(AppFeature.State.Tab.profile)
+            }
             
+            // Shop tab - always available (single-user items don't require auth)
             ShopView(store: store.scope(state: \.shop, action: \.shop))
                 .tabItem {
                     Image(systemName: "bag.fill")
@@ -30,6 +35,7 @@ struct MainTabView: View {
                 }
                 .tag(AppFeature.State.Tab.shop)
             
+            // Settings tab - always available
             SettingsView(store: store.scope(state: \.settings, action: \.settings))
                 .tabItem {
                     Image(systemName: "gearshape.fill")
@@ -47,6 +53,9 @@ struct MainTabView: View {
         .sheet(isPresented: .constant(store.help.isPresented)) {
             HelpView(store: store.scope(state: \.help, action: \.help))
         }
+        .sheet(isPresented: .constant(store.showConnectPrompt)) {
+            AuthenticationPromptView(store: store)
+        }
     }
 }
 
@@ -61,7 +70,14 @@ struct GameView: View {
                 } else if store.showModeSelection {
                     GameModeSelectionView(store: store.scope(state: \.modeSelection, action: \.modeSelection))
                 } else if store.currentGame == nil && store.singleUserSession == nil {
-                    GameMenuView(store: store)
+                    GameMenuView(
+                        store: store,
+                        isAuthenticated: store.isAuthenticated,
+                        onRequestAuthentication: {
+                            // This would need to be passed from the parent
+                            // For now, we'll handle this in the GameFeature
+                        }
+                    )
                 } else if store.isSearchingForGame {
                     GameSearchingView(store: store)
                 } else if let session = store.singleUserSession {
@@ -93,53 +109,101 @@ struct GameView: View {
     }
 }
 
-// MARK: - Game Menu View
+// MARK: - Game Menu View (Single-User First)
 struct GameMenuView: View {
     let store: StoreOf<GameFeature>
+    let isAuthenticated: Bool
+    let onRequestAuthentication: () -> Void
     
     var body: some View {
-        VStack(spacing: 32) {
-            VStack(spacing: 16) {
-                Text("Plant Battle Arena")
-                    .botanicalStyle(BotanicalTextStyle.largeTitle)
-                Text("Test your botanical knowledge")
-                    .botanicalStyle(BotanicalTextStyle.subheadline)
-                    .foregroundColor(.secondary)
-            }
-            
-            VStack(spacing: 16) {
-                Text("Choose Difficulty")
-                    .botanicalStyle(BotanicalTextStyle.headline)
+        ScrollView {
+            VStack(spacing: 24) {
+                // Header
+                VStack(spacing: 16) {
+                    Text("Plant Identification")
+                        .botanicalStyle(BotanicalTextStyle.largeTitle)
+                    Text("Challenge yourself with plant knowledge")
+                        .botanicalStyle(BotanicalTextStyle.subheadline)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                }
+                .padding(.top)
                 
-                VStack(spacing: 12) {
-                    ForEach(Game.Difficulty.allCases, id: \.self) { difficulty in
-                        DifficultyButton(
-                            title: difficulty.displayName,
-                            timeLimit: "\(Int(difficulty.timePerRound))s per round",
-                            isSelected: store.selectedDifficulty == difficulty
-                        ) {
-                            store.send(.searchForGame(difficulty))
-                        }
+                // Single-User Game Modes (Priority)
+                VStack(spacing: 16) {
+                    HStack {
+                        Text("Quick Play")
+                            .botanicalStyle(BotanicalTextStyle.headline)
+                        Spacer()
                     }
-                }
-            }
-            
-            if !store.gameHistory.isEmpty {
-                VStack(spacing: 8) {
-                    Text("Recent Games")
-                        .botanicalStyle(BotanicalTextStyle.headline)
                     
-                    LazyVStack(spacing: 8) {
-                        ForEach(store.gameHistory.prefix(3)) { game in
-                            GameHistoryCard(game: game)
+                    VStack(spacing: 12) {
+                        // Beat the Clock Mode
+                        SingleUserModeCard(
+                            title: "Beat the Clock",
+                            description: "Answer as many plants as you can in 60 seconds",
+                            icon: "timer",
+                            color: .orange,
+                            isRecommended: true
+                        ) {
+                            store.send(.showModeSelection(true))
+                            store.send(.modeSelection(.selectMode(.beatTheClock)))
+                        }
+                        
+                        // Speedrun Mode
+                        SingleUserModeCard(
+                            title: "Speedrun Challenge",
+                            description: "Identify 25 plants as quickly as possible",
+                            icon: "bolt.fill",
+                            color: .blue
+                        ) {
+                            store.send(.showModeSelection(true))
+                            store.send(.modeSelection(.selectMode(.speedrun)))
                         }
                     }
                 }
+                
+                // Multiplayer Section (Optional/Secondary)
+                VStack(spacing: 16) {
+                    HStack {
+                        Text("Multiplayer")
+                            .botanicalStyle(BotanicalTextStyle.headline)
+                        Spacer()
+                        if !store.isAuthenticated {
+                            Text("Requires Game Center")
+                                .botanicalStyle(BotanicalTextStyle.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    
+                    MultiplayerModeCard(
+                        store: store,
+                        isAuthenticated: isAuthenticated,
+                        onRequestAuthentication: onRequestAuthentication
+                    )
+                }
+                
+                // Recent Games Section
+                if !store.gameHistory.isEmpty {
+                    VStack(spacing: 12) {
+                        HStack {
+                            Text("Recent Games")
+                                .botanicalStyle(BotanicalTextStyle.headline)
+                            Spacer()
+                        }
+                        
+                        LazyVStack(spacing: 8) {
+                            ForEach(store.gameHistory.prefix(3)) { game in
+                                GameHistoryCard(game: game)
+                            }
+                        }
+                    }
+                }
+                
+                Spacer(minLength: 24)
             }
-            
-            Spacer()
+            .padding(.horizontal)
         }
-        .padding()
         .onAppear {
             store.send(.loadGameHistory)
         }
@@ -643,6 +707,272 @@ struct SingleUserGameResultsView: View {
     private func isNewSpeedrunRecord(_ score: SpeedrunScore) -> Bool {
         guard let personalBest = store.speedrunPersonalBest else { return true }
         return score.rating > personalBest.rating
+    }
+}
+
+// MARK: - Single User Mode Card
+struct SingleUserModeCard: View {
+    let title: String
+    let description: String
+    let icon: String
+    let color: Color
+    let isRecommended: Bool
+    let action: () -> Void
+    
+    init(
+        title: String,
+        description: String,
+        icon: String,
+        color: Color,
+        isRecommended: Bool = false,
+        action: @escaping () -> Void
+    ) {
+        self.title = title
+        self.description = description
+        self.icon = icon
+        self.color = color
+        self.isRecommended = isRecommended
+        self.action = action
+    }
+    
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 16) {
+                // Icon
+                Image(systemName: icon)
+                    .font(.title2)
+                    .foregroundColor(color)
+                    .frame(width: 40, height: 40)
+                    .background(
+                        Circle()
+                            .fill(color.opacity(0.15))
+                    )
+                
+                // Content
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack {
+                        Text(title)
+                            .botanicalStyle(BotanicalTextStyle.headline)
+                            .foregroundColor(.primary)
+                        
+                        if isRecommended {
+                            Text("RECOMMENDED")
+                                .botanicalStyle(BotanicalTextStyle.caption)
+                                .fontWeight(.bold)
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 2)
+                                .background(
+                                    Capsule()
+                                        .fill(Color.botanicalGreen)
+                                )
+                        }
+                        
+                        Spacer()
+                    }
+                    
+                    Text(description)
+                        .botanicalStyle(BotanicalTextStyle.body)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.leading)
+                }
+                
+                // Chevron
+                Image(systemName: "chevron.right")
+                    .font(.body)
+                    .foregroundColor(.secondary)
+            }
+            .padding(16)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color(.systemBackground))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color(.systemGray4), lineWidth: 1)
+                    )
+            )
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+}
+
+// MARK: - Multiplayer Mode Card
+struct MultiplayerModeCard: View {
+    let store: StoreOf<GameFeature>
+    let isAuthenticated: Bool
+    let onRequestAuthentication: () -> Void
+    
+    var body: some View {
+        Button(action: {
+            if isAuthenticated {
+                // Show difficulty selection for multiplayer
+                store.send(.showModeSelection(true))
+                store.send(.modeSelection(.selectMode(.multiplayer)))
+            } else {
+                // Request authentication for multiplayer
+                onRequestAuthentication()
+            }
+        }) {
+            HStack(spacing: 16) {
+                // Icon with authentication state
+                ZStack {
+                    Image(systemName: "person.2.fill")
+                        .font(.title2)
+                        .foregroundColor(isAuthenticated ? .botanicalGreen : .gray)
+                        .frame(width: 40, height: 40)
+                        .background(
+                            Circle()
+                                .fill((isAuthenticated ? Color.botanicalGreen : .gray).opacity(0.15))
+                        )
+                    
+                    if !isAuthenticated {
+                        Image(systemName: "lock.fill")
+                            .font(.caption)
+                            .foregroundColor(.white)
+                            .background(
+                                Circle()
+                                    .fill(Color.red)
+                                    .frame(width: 16, height: 16)
+                            )
+                            .offset(x: 12, y: -12)
+                    }
+                }
+                
+                // Content
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Battle Other Players")
+                        .botanicalStyle(BotanicalTextStyle.headline)
+                        .foregroundColor(isAuthenticated ? .primary : .secondary)
+                    
+                    Text(isAuthenticated 
+                         ? "Compete in real-time matches against other players"
+                         : "Connect with Game Center to unlock multiplayer battles"
+                    )
+                        .botanicalStyle(BotanicalTextStyle.body)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.leading)
+                }
+                
+                Spacer()
+                
+                // Action indicator
+                if isAuthenticated {
+                    Image(systemName: "chevron.right")
+                        .font(.body)
+                        .foregroundColor(.secondary)
+                } else {
+                    Text("Connect")
+                        .botanicalStyle(BotanicalTextStyle.caption)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.botanicalGreen)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(
+                            Capsule()
+                                .fill(Color.botanicalGreen.opacity(0.15))
+                        )
+                }
+            }
+            .padding(16)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color(.systemBackground))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(
+                                isAuthenticated ? Color(.systemGray4) : Color.botanicalGreen.opacity(0.3),
+                                lineWidth: isAuthenticated ? 1 : 2
+                            )
+                    )
+            )
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+}
+
+// MARK: - Authentication Prompt View
+struct AuthenticationPromptView: View {
+    @Bindable var store: StoreOf<AppFeature>
+    @Environment(\.dismiss) private var dismiss
+    
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 24) {
+                Spacer()
+                
+                // Header
+                VStack(spacing: 16) {
+                    Image(systemName: "gamecontroller.fill")
+                        .font(.system(size: 60))
+                        .foregroundColor(.botanicalGreen)
+                    
+                    Text("Connect with Game Center")
+                        .botanicalStyle(BotanicalTextStyle.largeTitle)
+                        .multilineTextAlignment(.center)
+                    
+                    Text(store.authPromptMessage)
+                        .botanicalStyle(BotanicalTextStyle.body)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
+                }
+                
+                // Benefits
+                VStack(spacing: 12) {
+                    ForEach(store.authenticationBenefits, id: \.self) { benefit in
+                        HStack(spacing: 12) {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundColor(.botanicalGreen)
+                            
+                            Text(benefit)
+                                .botanicalStyle(BotanicalTextStyle.body)
+                                .multilineTextAlignment(.leading)
+                            
+                            Spacer()
+                        }
+                    }
+                }
+                .padding()
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color(.systemGray6))
+                )
+                
+                Spacer()
+                
+                // Actions
+                VStack(spacing: 12) {
+                    BotanicalButton(
+                        "Connect with Game Center",
+                        style: .primary,
+                        size: .large
+                    ) {
+                        store.send(.requestAuthentication)
+                        dismiss()
+                    }
+                    
+                    BotanicalButton(
+                        "Maybe Later",
+                        style: .secondary,
+                        size: .large
+                    ) {
+                        store.send(.hideConnectPrompt)
+                        dismiss()
+                    }
+                }
+                .padding(.horizontal)
+            }
+            .padding()
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Close") {
+                        store.send(.hideConnectPrompt)
+                        dismiss()
+                    }
+                }
+            }
+        }
     }
 }
 

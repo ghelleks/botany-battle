@@ -14,6 +14,7 @@ struct GameFeature {
         var selectedDifficulty: Game.Difficulty = .medium
         var error: String?
         var gameHistory: [Game] = []
+        var isAuthenticated = false
         
         // Multiplayer specific state
         var currentGame: Game?
