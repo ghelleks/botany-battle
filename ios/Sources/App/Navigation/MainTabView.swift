@@ -10,7 +10,10 @@ struct MainTabView: View {
             set: { store.send(.tabChanged($0)) }
         )) {
             // Game tab - always available
-            GameView(store: store.scope(state: \.game, action: \.game))
+            GameView(
+                store: store.scope(state: \.game, action: \.game),
+                appStore: store
+            )
                 .tabItem {
                     Image(systemName: "gamecontroller.fill")
                     Text("Game")
@@ -61,6 +64,7 @@ struct MainTabView: View {
 
 struct GameView: View {
     let store: StoreOf<GameFeature>
+    let appStore: StoreOf<AppFeature>
     
     var body: some View {
         NavigationStack {
@@ -72,10 +76,9 @@ struct GameView: View {
                 } else if store.currentGame == nil && store.singleUserSession == nil {
                     GameMenuView(
                         store: store,
-                        isAuthenticated: store.isAuthenticated,
+                        isAuthenticated: appStore.isAuthenticated,
                         onRequestAuthentication: {
-                            // This would need to be passed from the parent
-                            // For now, we'll handle this in the GameFeature
+                            appStore.send(.requestFeature(.multiplayer))
                         }
                     )
                 } else if store.isSearchingForGame {

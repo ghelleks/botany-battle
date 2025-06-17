@@ -293,12 +293,18 @@ struct AppFeature {
                 
             case .setAuthenticationPreference(let preference):
                 state.authenticationPreference = preference
+                let authMode = mapToAuthFeatureMode(preference)
+                
+                // Sync with AuthFeature
+                var effects: [Effect<Action>] = [.send(.auth(.setAuthenticationMode(authMode)))]
+                
                 // If switching to required mode and not authenticated, trigger auth
                 if preference == .required && !state.isAuthenticated {
                     state.userRequestedAuthentication = true
-                    return .send(.auth(.checkAuthStatus))
+                    effects.append(.send(.auth(.checkAuthStatus)))
                 }
-                return .none
+                
+                return .concatenate(effects)
                 
             case .requestFeature(let feature):
                 state.attemptedAuthFeatures.insert(feature)
@@ -381,17 +387,24 @@ struct AppFeature {
     
     // MARK: - Helper Functions
     private func handleInitialAuth(state: State) -> Effect<Action> {
-        // In guest mode, we skip automatic authentication
-        if state.authenticationPreference == .required {
-            return .concatenate(
-                .run { send in
-                    await send(.auth(.checkAuthStatus))
-                },
-                .send(.tutorial(.checkTutorialStatus))
-            )
-        } else {
-            // Just check tutorial status, skip auth check
-            return .send(.tutorial(.checkTutorialStatus))
+        // Sync authentication mode with AuthFeature
+        let authMode = mapToAuthFeatureMode(state.authenticationPreference)
+        
+        return .concatenate(
+            .send(.auth(.setAuthenticationMode(authMode))),
+            // In guest mode, we use silent authentication check
+            state.authenticationPreference == .required 
+                ? .send(.auth(.checkAuthStatus))
+                : .send(.auth(.checkAuthStatusSilently)),
+            .send(.tutorial(.checkTutorialStatus))
+        )
+    }
+    
+    private func mapToAuthFeatureMode(_ preference: State.AuthPreference) -> AuthFeature.AuthenticationMode {
+        switch preference {
+        case .required: return .required
+        case .optional: return .optional
+        case .disabled: return .disabled
         }
     }
 }
