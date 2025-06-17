@@ -165,6 +165,22 @@ struct GameFeature {
         case gameHistoryLoaded([Game])
         case loadPersonalBests
         case personalBestsLoaded([PersonalBest])
+        
+        // Authentication handling
+        case authenticationSucceeded
+        case setAuthenticationStatus(Bool)
+        
+        // Delegate actions to parent (AppFeature)
+        case delegate(Delegate)
+        
+        enum Delegate {
+            case requestAuthentication(AuthenticatedFeature)
+        }
+        
+        enum AuthenticatedFeature {
+            case multiplayer
+            case leaderboards
+        }
     }
     
     @Dependency(\.gameService) var gameService
@@ -194,6 +210,14 @@ struct GameFeature {
             switch action {
             // MARK: - Mode Selection
             case .modeSelection(.delegate(.startMultiplayerGame(let difficulty))):
+                // Check authentication before starting multiplayer
+                if !state.isAuthenticated {
+                    // Request authentication from parent AppFeature
+                    state.selectedGameMode = .multiplayer
+                    state.selectedDifficulty = difficulty
+                    return .send(.delegate(.requestAuthentication(.multiplayer)))
+                }
+                
                 state.selectedGameMode = .multiplayer
                 state.selectedDifficulty = difficulty
                 state.showModeSelection = false
@@ -590,6 +614,22 @@ struct GameFeature {
                 state.beatTheClockScore = nil
                 state.speedrunScore = nil
                 state.newPersonalBest = nil
+                return .none
+                
+            // MARK: - Authentication Actions
+            case .setAuthenticationStatus(let isAuthenticated):
+                state.isAuthenticated = isAuthenticated
+                return .none
+                
+            case .authenticationSucceeded:
+                // If user was trying to access multiplayer and authentication succeeded, start the flow
+                if state.selectedGameMode == .multiplayer {
+                    state.showModeSelection = false
+                    return .send(.searchForMultiplayerGame(state.selectedDifficulty))
+                }
+                return .none
+                
+            case .delegate:
                 return .none
             }
         }

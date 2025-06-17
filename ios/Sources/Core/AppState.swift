@@ -159,6 +159,16 @@ struct AppFeature {
                 return "Connect with Game Center to access premium features"
             }
         }
+        
+        // Get authentication benefits for display
+        var authenticationBenefits: [String] {
+            [
+                "Play multiplayer battles against other players",
+                "Compete on global leaderboards",
+                "Sync your progress across devices",
+                "Earn Game Center achievements"
+            ]
+        }
     }
     
     // Guest Session Management
@@ -261,7 +271,11 @@ struct AppFeature {
                 state.pendingAuthAction = nil
                 // Clear attempted features since user is now authenticated
                 state.attemptedAuthFeatures.removeAll()
-                return .none
+                // Sync authentication status with GameFeature
+                return .concatenate(
+                    .send(.game(.setAuthenticationStatus(true))),
+                    .send(.game(.authenticationSucceeded))
+                )
                 
             case .auth(.logoutSuccess):
                 state.isAuthenticated = false
@@ -269,8 +283,11 @@ struct AppFeature {
                 state.userRequestedAuthentication = false
                 state.showConnectPrompt = false
                 state.pendingAuthAction = nil
-                // Create new guest session on logout
-                return .send(.createGuestSession(nil))
+                // Sync authentication status with GameFeature and create new guest session
+                return .concatenate(
+                    .send(.game(.setAuthenticationStatus(false))),
+                    .send(.createGuestSession(nil))
+                )
                 
             case .requestAuthentication:
                 state.userRequestedAuthentication = true
@@ -369,15 +386,29 @@ struct AppFeature {
                 return .none
                 
             case .onAppear:
+                // Sync authentication status with GameFeature
+                var effects: [Effect<Action>] = [.send(.game(.setAuthenticationStatus(state.isAuthenticated)))]
+                
                 // Initialize guest session if needed
                 if state.isGuestMode && state.guestSession == nil {
-                    return .concatenate(
+                    effects.append(contentsOf: [
                         .send(.createGuestSession(nil)),
                         handleInitialAuth(state: state)
-                    )
+                    ])
                 } else {
-                    return handleInitialAuth(state: state)
+                    effects.append(handleInitialAuth(state: state))
                 }
+                
+                return .concatenate(effects)
+                
+            // MARK: - Game Delegate Actions
+            case .game(.delegate(.requestAuthentication(let feature))):
+                // Map GameFeature's AuthenticatedFeature to AppFeature's AuthenticatedFeature
+                let appFeature: State.AuthenticatedFeature = switch feature {
+                case .multiplayer: .multiplayer
+                case .leaderboards: .leaderboards
+                }
+                return .send(.requestFeature(appFeature))
                 
             case .auth, .game, .profile, .shop, .settings, .tutorial, .help:
                 return .none
