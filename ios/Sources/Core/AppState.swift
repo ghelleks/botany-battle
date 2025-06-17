@@ -12,11 +12,25 @@ struct AppFeature {
         var settings = SettingsFeature.State()
         var tutorial = TutorialFeature.State()
         var help = HelpFeature.State()
+        
+        // Authentication State
         var isAuthenticated = false
         var isGuestMode = true
         var authenticationPreference: AuthPreference = .optional
         var userRequestedAuthentication = false
+        
+        // User Session Management
+        var guestSession: GuestSession?
+        var sessionStartTime = Date()
+        var hasCompletedTutorial = false
+        
+        // UI State
         var currentTab: Tab = .game
+        var showConnectPrompt = false
+        var pendingAuthAction: PendingAuthAction?
+        
+        // Feature Access Tracking
+        var attemptedAuthFeatures: Set<AuthenticatedFeature> = []
         
         enum Tab: CaseIterable {
             case game
@@ -25,13 +39,58 @@ struct AppFeature {
             case settings
         }
         
-        enum AuthPreference: Equatable {
+        enum AuthPreference: Equatable, CaseIterable {
             case required    // Force authentication (legacy behavior)
             case optional    // Allow guest mode with optional auth
             case disabled    // Never authenticate (testing mode)
+            
+            var displayName: String {
+                switch self {
+                case .required: return "Required"
+                case .optional: return "Optional"
+                case .disabled: return "Disabled"
+                }
+            }
         }
         
-        // Computed property to determine when to show authentication view
+        enum PendingAuthAction: Equatable {
+            case accessMultiplayer
+            case viewProfile
+            case accessLeaderboards
+            case purchaseItems
+        }
+        
+        enum AuthenticatedFeature: String, CaseIterable, Hashable {
+            case multiplayer = "multiplayer"
+            case profile = "profile"
+            case leaderboards = "leaderboards"
+            case socialFeatures = "social"
+            case cloudSync = "sync"
+            
+            var displayName: String {
+                switch self {
+                case .multiplayer: return "Multiplayer Games"
+                case .profile: return "Player Profile"
+                case .leaderboards: return "Leaderboards"
+                case .socialFeatures: return "Social Features"
+                case .cloudSync: return "Cloud Sync"
+                }
+            }
+            
+            var description: String {
+                switch self {
+                case .multiplayer: return "Play against other players online"
+                case .profile: return "View your Game Center profile and achievements"
+                case .leaderboards: return "Compare scores with other players"
+                case .socialFeatures: return "Connect with friends and share achievements"
+                case .cloudSync: return "Sync your progress across devices"
+                }
+            }
+        }
+        
+        // Computed Properties
+        
+        // Determine when to show authentication view
         var showAuthenticationView: Bool {
             switch authenticationPreference {
             case .required:
@@ -43,9 +102,91 @@ struct AppFeature {
             }
         }
         
-        // Computed property for features requiring authentication
+        // Check if features requiring authentication are blocked
         var requiresAuthentication: Bool {
             !isAuthenticated && !isGuestMode
+        }
+        
+        // Available tabs based on authentication status
+        var availableTabs: [Tab] {
+            if isAuthenticated {
+                return Tab.allCases
+            } else {
+                // In guest mode, hide profile tab
+                return [.game, .shop, .settings]
+            }
+        }
+        
+        // Check if specific feature is available
+        func isFeatureAvailable(_ feature: AuthenticatedFeature) -> Bool {
+            switch feature {
+            case .multiplayer, .profile, .leaderboards, .socialFeatures:
+                return isAuthenticated
+            case .cloudSync:
+                return isAuthenticated // Could be made optional in future
+            }
+        }
+        
+        // Guest session information
+        var guestDisplayName: String {
+            guestSession?.displayName ?? "Guest Player"
+        }
+        
+        // Session duration for analytics
+        var sessionDuration: TimeInterval {
+            Date().timeIntervalSince(sessionStartTime)
+        }
+        
+        // Check if user has attempted auth features
+        var hasAttemptedAuthFeatures: Bool {
+            !attemptedAuthFeatures.isEmpty
+        }
+        
+        // Get authentication prompt message based on attempted feature
+        var authPromptMessage: String {
+            guard let pendingAction = pendingAuthAction else {
+                return "Connect with Game Center to unlock additional features"
+            }
+            
+            switch pendingAction {
+            case .accessMultiplayer:
+                return "Connect with Game Center to play against other players"
+            case .viewProfile:
+                return "Connect with Game Center to view your profile and achievements"
+            case .accessLeaderboards:
+                return "Connect with Game Center to compare your scores with others"
+            case .purchaseItems:
+                return "Connect with Game Center to access premium features"
+            }
+        }
+    }
+    
+    // Guest Session Management
+    struct GuestSession: Equatable {
+        let id: String
+        let displayName: String
+        let createdAt: Date
+        var gamesPlayed: Int
+        var totalScore: Int
+        var preferredDifficulty: Game.Difficulty
+        
+        init(displayName: String = "Guest Player") {
+            self.id = UUID().uuidString
+            self.displayName = displayName
+            self.createdAt = Date()
+            self.gamesPlayed = 0
+            self.totalScore = 0
+            self.preferredDifficulty = .medium
+        }
+        
+        mutating func recordGame(score: Int, difficulty: Game.Difficulty) {
+            gamesPlayed += 1
+            totalScore += score
+            preferredDifficulty = difficulty
+        }
+        
+        var averageScore: Double {
+            gamesPlayed > 0 ? Double(totalScore) / Double(gamesPlayed) : 0
         }
     }
     
@@ -59,10 +200,25 @@ struct AppFeature {
         case help(HelpFeature.Action)
         case tabChanged(State.Tab)
         case onAppear
+        
+        // Authentication Actions
         case requestAuthentication
         case cancelAuthentication
         case enterGuestMode
         case setAuthenticationPreference(State.AuthPreference)
+        case requestFeature(State.AuthenticatedFeature)
+        case showConnectPrompt(State.PendingAuthAction?)
+        case hideConnectPrompt
+        
+        // Guest Session Actions
+        case createGuestSession(String?)
+        case updateGuestSession(gamesPlayed: Int, totalScore: Int, difficulty: Game.Difficulty)
+        case recordGameCompletion(score: Int, difficulty: Game.Difficulty)
+        
+        // Session Management
+        case sessionStarted
+        case tutorialCompleted
+        case featureAttempted(State.AuthenticatedFeature)
     }
     
     var body: some ReducerOf<Self> {
@@ -96,35 +252,25 @@ struct AppFeature {
         
         Reduce { state, action in
             switch action {
+            // MARK: - Authentication Actions
             case .auth(.loginSuccess):
                 state.isAuthenticated = true
                 state.isGuestMode = false
                 state.userRequestedAuthentication = false
+                state.showConnectPrompt = false
+                state.pendingAuthAction = nil
+                // Clear attempted features since user is now authenticated
+                state.attemptedAuthFeatures.removeAll()
                 return .none
                 
             case .auth(.logoutSuccess):
                 state.isAuthenticated = false
                 state.isGuestMode = true
                 state.userRequestedAuthentication = false
-                return .none
-                
-            case .tabChanged(let tab):
-                state.currentTab = tab
-                return .none
-                
-            case .onAppear:
-                // In guest mode, we skip automatic authentication
-                if state.authenticationPreference == .required {
-                    return .concatenate(
-                        .run { send in
-                            await send(.auth(.checkAuthStatus))
-                        },
-                        .send(.tutorial(.checkTutorialStatus))
-                    )
-                } else {
-                    // Just check tutorial status, skip auth check
-                    return .send(.tutorial(.checkTutorialStatus))
-                }
+                state.showConnectPrompt = false
+                state.pendingAuthAction = nil
+                // Create new guest session on logout
+                return .send(.createGuestSession(nil))
                 
             case .requestAuthentication:
                 state.userRequestedAuthentication = true
@@ -132,11 +278,17 @@ struct AppFeature {
                 
             case .cancelAuthentication:
                 state.userRequestedAuthentication = false
+                state.showConnectPrompt = false
+                state.pendingAuthAction = nil
                 return .none
                 
             case .enterGuestMode:
                 state.isGuestMode = true
                 state.userRequestedAuthentication = false
+                state.showConnectPrompt = false
+                if state.guestSession == nil {
+                    return .send(.createGuestSession(nil))
+                }
                 return .none
                 
             case .setAuthenticationPreference(let preference):
@@ -148,9 +300,98 @@ struct AppFeature {
                 }
                 return .none
                 
+            case .requestFeature(let feature):
+                state.attemptedAuthFeatures.insert(feature)
+                if !state.isAuthenticated {
+                    // Map feature to pending action and show connect prompt
+                    let pendingAction: State.PendingAuthAction = switch feature {
+                    case .multiplayer: .accessMultiplayer
+                    case .profile: .viewProfile
+                    case .leaderboards: .accessLeaderboards
+                    case .socialFeatures, .cloudSync: .purchaseItems
+                    }
+                    return .send(.showConnectPrompt(pendingAction))
+                }
+                return .none
+                
+            case .showConnectPrompt(let pendingAction):
+                state.showConnectPrompt = true
+                state.pendingAuthAction = pendingAction
+                return .none
+                
+            case .hideConnectPrompt:
+                state.showConnectPrompt = false
+                state.pendingAuthAction = nil
+                return .none
+                
+            // MARK: - Guest Session Actions
+            case .createGuestSession(let displayName):
+                state.guestSession = GuestSession(displayName: displayName ?? "Guest Player")
+                state.sessionStartTime = Date()
+                return .send(.sessionStarted)
+                
+            case .updateGuestSession(let gamesPlayed, let totalScore, let difficulty):
+                state.guestSession?.gamesPlayed = gamesPlayed
+                state.guestSession?.totalScore = totalScore
+                state.guestSession?.preferredDifficulty = difficulty
+                return .none
+                
+            case .recordGameCompletion(let score, let difficulty):
+                state.guestSession?.recordGame(score: score, difficulty: difficulty)
+                return .none
+                
+            // MARK: - Session Management
+            case .sessionStarted:
+                state.sessionStartTime = Date()
+                return .none
+                
+            case .tutorialCompleted:
+                state.hasCompletedTutorial = true
+                return .none
+                
+            case .featureAttempted(let feature):
+                state.attemptedAuthFeatures.insert(feature)
+                return .none
+                
+            // MARK: - Navigation and App Lifecycle
+            case .tabChanged(let tab):
+                state.currentTab = tab
+                // If user tries to access profile tab without authentication, show prompt
+                if tab == .profile && !state.isAuthenticated {
+                    return .send(.requestFeature(.profile))
+                }
+                return .none
+                
+            case .onAppear:
+                // Initialize guest session if needed
+                if state.isGuestMode && state.guestSession == nil {
+                    return .concatenate(
+                        .send(.createGuestSession(nil)),
+                        handleInitialAuth(state: state)
+                    )
+                } else {
+                    return handleInitialAuth(state: state)
+                }
+                
             case .auth, .game, .profile, .shop, .settings, .tutorial, .help:
                 return .none
             }
+        }
+    }
+    
+    // MARK: - Helper Functions
+    private func handleInitialAuth(state: State) -> Effect<Action> {
+        // In guest mode, we skip automatic authentication
+        if state.authenticationPreference == .required {
+            return .concatenate(
+                .run { send in
+                    await send(.auth(.checkAuthStatus))
+                },
+                .send(.tutorial(.checkTutorialStatus))
+            )
+        } else {
+            // Just check tutorial status, skip auth check
+            return .send(.tutorial(.checkTutorialStatus))
         }
     }
 }
