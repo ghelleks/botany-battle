@@ -1,6 +1,23 @@
 import Foundation
 import Dependencies
 
+enum SingleUserGameError: Error, LocalizedError {
+    case noPlantDataAvailable
+    case sessionNotFound
+    case invalidGameState
+    
+    var errorDescription: String? {
+        switch self {
+        case .noPlantDataAvailable:
+            return "No plant data available for game session"
+        case .sessionNotFound:
+            return "Game session not found"
+        case .invalidGameState:
+            return "Invalid game state"
+        }
+    }
+}
+
 protocol SingleUserGameServiceProtocol {
     func startGame(mode: GameMode, difficulty: Game.Difficulty) -> SingleUserGameSession
     func getCurrentQuestion(for session: SingleUserGameSession) async throws -> (plant: Plant, options: [String])
@@ -16,10 +33,20 @@ protocol SingleUserGameServiceProtocol {
 final class SingleUserGameService: SingleUserGameServiceProtocol {
     @Dependency(\.userDefaults) var userDefaults
     @Dependency(\.personalBestService) var personalBestService
+    @Dependency(\.plantAPIService) var plantAPIService
+    @Dependency(\.plantCacheService) var plantCacheService
     
     private let savedSessionKey = "current_single_user_session"
     
+    // Cache for current game session plants to avoid repeated API calls
+    private var sessionPlantCache: [String: Plant] = [:]
+    private var sessionPlantOptions: [String: [String]] = [:]
+    
     func startGame(mode: GameMode, difficulty: Game.Difficulty) -> SingleUserGameSession {
+        // Clear any existing session cache
+        sessionPlantCache.removeAll()
+        sessionPlantOptions.removeAll()
+        
         let session = SingleUserGameSession(
             mode: mode,
             difficulty: difficulty
@@ -30,43 +57,127 @@ final class SingleUserGameService: SingleUserGameServiceProtocol {
     }
     
     func getCurrentQuestion(for session: SingleUserGameSession) async throws -> (plant: Plant, options: [String]) {
-        // For now, return mock data. This will be replaced with actual plant fetching logic
-        let mockPlant = Plant(
-            id: UUID().uuidString,
-            scientificName: "Mockus planticus \(session.currentQuestionIndex + 1)",
-            commonNames: ["Mock Plant \(session.currentQuestionIndex + 1)", "Test Plant"],
-            family: "Mockaceae",
-            genus: "Mockus",
-            species: "planticus",
-            imageURL: "https://example.com/plant.jpg",
-            thumbnailURL: "https://example.com/plant-thumb.jpg",
-            description: "A mock plant for testing purposes",
-            difficulty: session.difficulty.rawValue.hashValue % 100,
-            rarity: .common,
-            habitat: ["Mock habitat"],
-            regions: ["Mock region"],
-            characteristics: Plant.Characteristics(
-                leafType: "Mock leaf",
-                flowerColor: ["Mock color"],
-                bloomTime: ["Mock season"],
-                height: Plant.Characteristics.HeightRange(min: 10, max: 50, unit: "cm"),
-                sunRequirement: "Full sun",
-                waterRequirement: "Moderate",
-                soilType: ["Mock soil"]
-            ),
-            iNaturalistId: nil
-        )
+        let questionKey = "\(session.id)_\(session.currentQuestionIndex)"
         
-        let correctAnswer = mockPlant.primaryCommonName
-        let wrongAnswers = [
-            "Wrong Plant A",
-            "Wrong Plant B", 
-            "Wrong Plant C"
-        ]
+        // Check if we already have this question cached
+        if let cachedPlant = sessionPlantCache[questionKey],
+           let cachedOptions = sessionPlantOptions[questionKey] {
+            return (plant: cachedPlant, options: cachedOptions)
+        }
         
-        let allOptions = ([correctAnswer] + wrongAnswers).shuffled()
+        // Offline-first approach: Try cache first, then API
+        var plants: [Plant] = []
         
-        return (plant: mockPlant, options: allOptions)
+        do {
+            // First try to get cached plants for this difficulty
+            let cachedPlants = try await plantCacheService.getCachedPlants(
+                forDifficulty: session.difficulty, 
+                limit: 20
+            )
+            
+            if cachedPlants.count >= 4 {
+                // We have enough cached plants, use them
+                plants = Array(cachedPlants.shuffled().prefix(4))
+            } else {
+                // Not enough cached plants, try to fetch from API
+                do {
+                    let fetchedPlants = try await plantAPIService.fetchPopularPlants(
+                        difficulty: session.difficulty,
+                        limit: 4
+                    )
+                    
+                    // Cache the newly fetched plants for future offline use
+                    try await plantCacheService.cachePlants(fetchedPlants)
+                    plants = fetchedPlants
+                    
+                } catch {
+                    // API failed, use whatever cached plants we have
+                    if !cachedPlants.isEmpty {
+                        plants = cachedPlants
+                    } else {
+                        throw SingleUserGameError.noPlantDataAvailable
+                    }
+                }
+            }
+        } catch {
+            // Cache also failed, try API as last resort
+            do {
+                plants = try await plantAPIService.fetchPopularPlants(
+                    difficulty: session.difficulty,
+                    limit: 4
+                )
+            } catch {
+                throw SingleUserGameError.noPlantDataAvailable
+            }
+        }
+        
+        guard let targetPlant = plants.first else {
+            throw SingleUserGameError.noPlantDataAvailable
+        }
+        
+        // Record plant usage for cache management
+        try? await plantCacheService.recordPlantUsage(targetPlant.id)
+        
+        // Generate multiple choice options
+        let correctAnswer = targetPlant.primaryCommonName
+        
+        // Get wrong answers from other plants, preferably from same family for realistic distractors
+        var wrongAnswers: [String] = []
+        let otherPlants = Array(plants.dropFirst())
+        
+        // First, try to get plants from the same family for better distractors
+        let sameFamilyPlants = otherPlants.filter { $0.family == targetPlant.family && $0.primaryCommonName != correctAnswer }
+        
+        // Add same family distractors first
+        for plant in sameFamilyPlants.prefix(2) {
+            wrongAnswers.append(plant.primaryCommonName)
+        }
+        
+        // Fill remaining slots with any other plants
+        for plant in otherPlants where wrongAnswers.count < 3 && plant.primaryCommonName != correctAnswer {
+            wrongAnswers.append(plant.primaryCommonName)
+        }
+        
+        // If we still need more options, try to get from same family in cache
+        if wrongAnswers.count < 3 {
+            do {
+                let sameFamilyCached = try await plantCacheService.getCachedPlantsForFamily(
+                    targetPlant.family, 
+                    limit: 5
+                )
+                
+                for plant in sameFamilyCached where wrongAnswers.count < 3 && plant.primaryCommonName != correctAnswer {
+                    wrongAnswers.append(plant.primaryCommonName)
+                }
+            } catch {
+                // Ignore cache errors for fallback options
+            }
+        }
+        
+        // If we still need more options, add some generic wrong answers
+        while wrongAnswers.count < 3 {
+            let genericOptions = [
+                "Unknown Species A",
+                "Unknown Species B", 
+                "Unknown Species C",
+                "Common Garden Plant",
+                "Wild Specimen"
+            ]
+            for option in genericOptions.shuffled() {
+                if wrongAnswers.count < 3 && option != correctAnswer {
+                    wrongAnswers.append(option)
+                }
+            }
+        }
+        
+        // Shuffle all options
+        let allOptions = ([correctAnswer] + Array(wrongAnswers.prefix(3))).shuffled()
+        
+        // Cache the question for this session
+        sessionPlantCache[questionKey] = targetPlant
+        sessionPlantOptions[questionKey] = allOptions
+        
+        return (plant: targetPlant, options: allOptions)
     }
     
     func submitAnswer(
@@ -153,6 +264,8 @@ final class SingleUserGameService: SingleUserGameServiceProtocol {
     
     func clearSavedSession() {
         userDefaults.removeObject(forKey: savedSessionKey)
+        sessionPlantCache.removeAll()
+        sessionPlantOptions.removeAll()
     }
 }
 

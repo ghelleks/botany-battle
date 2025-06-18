@@ -45,4 +45,23 @@
         <attribute name="speedrunRating" optional="NO" attributeType="Integer 32" defaultValue="0" usesScalarValueType="YES"/>
         <attribute name="totalAnswers" optional="NO" attributeType="Integer 32" defaultValue="0" usesScalarValueType="YES"/>
     </entity>
+    <entity name="CachedPlantEntity" representedClassName="CachedPlantEntity" syncable="YES" codeGenerationType="class">
+        <attribute name="cachedAt" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="commonNames" optional="NO" attributeType="String"/>
+        <attribute name="description_" optional="YES" attributeType="String"/>
+        <attribute name="difficulty" optional="NO" attributeType="Integer 32" defaultValue="0" usesScalarValueType="YES"/>
+        <attribute name="family" optional="NO" attributeType="String"/>
+        <attribute name="genus" optional="NO" attributeType="String"/>
+        <attribute name="habitat" optional="NO" attributeType="String"/>
+        <attribute name="id" optional="NO" attributeType="String"/>
+        <attribute name="imageURL" optional="NO" attributeType="String"/>
+        <attribute name="iNaturalistId" optional="YES" attributeType="Integer 32" defaultValue="0" usesScalarValueType="YES"/>
+        <attribute name="lastUsed" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="rarity" optional="NO" attributeType="String"/>
+        <attribute name="regions" optional="NO" attributeType="String"/>
+        <attribute name="scientificName" optional="NO" attributeType="String"/>
+        <attribute name="species" optional="NO" attributeType="String"/>
+        <attribute name="thumbnailURL" optional="YES" attributeType="String"/>
+        <attribute name="useCount" optional="NO" attributeType="Integer 32" defaultValue="0" usesScalarValueType="YES"/>
+    </entity>
 </model>
