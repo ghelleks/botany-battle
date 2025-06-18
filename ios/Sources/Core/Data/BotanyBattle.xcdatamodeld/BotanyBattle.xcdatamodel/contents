@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="22225" systemVersion="23A344" minimumToolsVersion="Automatic" sourceLanguage="Swift" userDefinedModelVersionIdentifier="">
+    <entity name="GameHistoryEntity" representedClassName="GameHistoryEntity" syncable="YES" codeGenerationType="class">
+        <attribute name="completedAt" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="correctAnswers" optional="NO" attributeType="Integer 32" defaultValue="0" usesScalarValueType="YES"/>
+        <attribute name="difficulty" optional="NO" attributeType="String"/>
+        <attribute name="gameId" optional="NO" attributeType="String"/>
+        <attribute name="gameMode" optional="NO" attributeType="String"/>
+        <attribute name="isNewPersonalBest" optional="NO" attributeType="Boolean" defaultValue="NO" usesScalarValueType="YES"/>
+        <attribute name="questionsAnswered" optional="NO" attributeType="Integer 32" defaultValue="0" usesScalarValueType="YES"/>
+        <attribute name="score" optional="NO" attributeType="Integer 32" defaultValue="0" usesScalarValueType="YES"/>
+        <attribute name="totalGameTime" optional="NO" attributeType="Double" defaultValue="0.0" usesScalarValueType="YES"/>
+    </entity>
+    <entity name="PersonalBestEntity" representedClassName="PersonalBestEntity" syncable="YES" codeGenerationType="class">
+        <attribute name="achievedAt" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="bestId" optional="NO" attributeType="String"/>
+        <attribute name="correctAnswers" optional="NO" attributeType="Integer 32" defaultValue="0" usesScalarValueType="YES"/>
+        <attribute name="difficulty" optional="NO" attributeType="String"/>
+        <attribute name="gameMode" optional="NO" attributeType="String"/>
+        <attribute name="questionsAnswered" optional="NO" attributeType="Integer 32" defaultValue="0" usesScalarValueType="YES"/>
+        <attribute name="score" optional="NO" attributeType="Integer 32" defaultValue="0" usesScalarValueType="YES"/>
+        <attribute name="totalGameTime" optional="NO" attributeType="Double" defaultValue="0.0" usesScalarValueType="YES"/>
+    </entity>
+    <entity name="BeatTheClockScoreEntity" representedClassName="BeatTheClockScoreEntity" syncable="YES" codeGenerationType="class">
+        <attribute name="accuracy" optional="NO" attributeType="Double" defaultValue="0.0" usesScalarValueType="YES"/>
+        <attribute name="achievedAt" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="correctAnswers" optional="NO" attributeType="Integer 32" defaultValue="0" usesScalarValueType="YES"/>
+        <attribute name="difficulty" optional="NO" attributeType="String"/>
+        <attribute name="isNewRecord" optional="NO" attributeType="Boolean" defaultValue="NO" usesScalarValueType="YES"/>
+        <attribute name="pointsPerSecond" optional="NO" attributeType="Double" defaultValue="0.0" usesScalarValueType="YES"/>
+        <attribute name="scoreId" optional="NO" attributeType="String"/>
+        <attribute name="timeUsed" optional="NO" attributeType="Double" defaultValue="0.0" usesScalarValueType="YES"/>
+        <attribute name="totalAnswers" optional="NO" attributeType="Integer 32" defaultValue="0" usesScalarValueType="YES"/>
+    </entity>
+    <entity name="SpeedrunScoreEntity" representedClassName="SpeedrunScoreEntity" syncable="YES" codeGenerationType="class">
+        <attribute name="accuracy" optional="NO" attributeType="Double" defaultValue="0.0" usesScalarValueType="YES"/>
+        <attribute name="achievedAt" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="averageTimePerQuestion" optional="NO" attributeType="Double" defaultValue="0.0" usesScalarValueType="YES"/>
+        <attribute name="completionTime" optional="NO" attributeType="Double" defaultValue="0.0" usesScalarValueType="YES"/>
+        <attribute name="correctAnswers" optional="NO" attributeType="Integer 32" defaultValue="0" usesScalarValueType="YES"/>
+        <attribute name="difficulty" optional="NO" attributeType="String"/>
+        <attribute name="isCompleted" optional="NO" attributeType="Boolean" defaultValue="NO" usesScalarValueType="YES"/>
+        <attribute name="isNewRecord" optional="NO" attributeType="Boolean" defaultValue="NO" usesScalarValueType="YES"/>
+        <attribute name="scoreId" optional="NO" attributeType="String"/>
+        <attribute name="speedrunRating" optional="NO" attributeType="Integer 32" defaultValue="0" usesScalarValueType="YES"/>
+        <attribute name="totalAnswers" optional="NO" attributeType="Integer 32" defaultValue="0" usesScalarValueType="YES"/>
+    </entity>
+</model>

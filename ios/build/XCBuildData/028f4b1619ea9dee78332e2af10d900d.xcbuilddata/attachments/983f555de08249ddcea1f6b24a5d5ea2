@@ -1,0 +1,48 @@
+{
+  "" : {
+    "diagnostics" : "/Users/gunnarhellekson/Code/botany-battle-issue-2/ios/build/BotanyBattle.build/Debug-iphoneos/BotanyBattle.build/Objects-normal/arm64/BotanyBattle-master.dia",
+    "emit-module-dependencies" : "/Users/gunnarhellekson/Code/botany-battle-issue-2/ios/build/BotanyBattle.build/Debug-iphoneos/BotanyBattle.build/Objects-normal/arm64/BotanyBattle-master-emit-module.d",
+    "emit-module-diagnostics" : "/Users/gunnarhellekson/Code/botany-battle-issue-2/ios/build/BotanyBattle.build/Debug-iphoneos/BotanyBattle.build/Objects-normal/arm64/BotanyBattle-master-emit-module.dia",
+    "swift-dependencies" : "/Users/gunnarhellekson/Code/botany-battle-issue-2/ios/build/BotanyBattle.build/Debug-iphoneos/BotanyBattle.build/Objects-normal/arm64/BotanyBattle-master.swiftdeps"
+  },
+  "/Users/gunnarhellekson/Code/botany-battle-issue-2/ios/BotanyBattle/BotanyBattleApp.swift" : {
+    "const-values" : "/Users/gunnarhellekson/Code/botany-battle-issue-2/ios/build/BotanyBattle.build/Debug-iphoneos/BotanyBattle.build/Objects-normal/arm64/BotanyBattleApp.swiftconstvalues",
+    "dependencies" : "/Users/gunnarhellekson/Code/botany-battle-issue-2/ios/build/BotanyBattle.build/Debug-iphoneos/BotanyBattle.build/Objects-normal/arm64/BotanyBattleApp.d",
+    "diagnostics" : "/Users/gunnarhellekson/Code/botany-battle-issue-2/ios/build/BotanyBattle.build/Debug-iphoneos/BotanyBattle.build/Objects-normal/arm64/BotanyBattleApp.dia",
+    "index-unit-output-path" : "/BotanyBattle.build/Debug-iphoneos/BotanyBattle.build/Objects-normal/arm64/BotanyBattleApp.o",
+    "llvm-bc" : "/Users/gunnarhellekson/Code/botany-battle-issue-2/ios/build/BotanyBattle.build/Debug-iphoneos/BotanyBattle.build/Objects-normal/arm64/BotanyBattleApp.bc",
+    "object" : "/Users/gunnarhellekson/Code/botany-battle-issue-2/ios/build/BotanyBattle.build/Debug-iphoneos/BotanyBattle.build/Objects-normal/arm64/BotanyBattleApp.o",
+    "swift-dependencies" : "/Users/gunnarhellekson/Code/botany-battle-issue-2/ios/build/BotanyBattle.build/Debug-iphoneos/BotanyBattle.build/Objects-normal/arm64/BotanyBattleApp.swiftdeps",
+    "swiftmodule" : "/Users/gunnarhellekson/Code/botany-battle-issue-2/ios/build/BotanyBattle.build/Debug-iphoneos/BotanyBattle.build/Objects-normal/arm64/BotanyBattleApp~partial.swiftmodule"
+  },
+  "/Users/gunnarhellekson/Code/botany-battle-issue-2/ios/BotanyBattle/ContentView.swift" : {
+    "const-values" : "/Users/gunnarhellekson/Code/botany-battle-issue-2/ios/build/BotanyBattle.build/Debug-iphoneos/BotanyBattle.build/Objects-normal/arm64/ContentView.swiftconstvalues",
+    "dependencies" : "/Users/gunnarhellekson/Code/botany-battle-issue-2/ios/build/BotanyBattle.build/Debug-iphoneos/BotanyBattle.build/Objects-normal/arm64/ContentView.d",
+    "diagnostics" : "/Users/gunnarhellekson/Code/botany-battle-issue-2/ios/build/BotanyBattle.build/Debug-iphoneos/BotanyBattle.build/Objects-normal/arm64/ContentView.dia",
+    "index-unit-output-path" : "/BotanyBattle.build/Debug-iphoneos/BotanyBattle.build/Objects-normal/arm64/ContentView.o",
+    "llvm-bc" : "/Users/gunnarhellekson/Code/botany-battle-issue-2/ios/build/BotanyBattle.build/Debug-iphoneos/BotanyBattle.build/Objects-normal/arm64/ContentView.bc",
+    "object" : "/Users/gunnarhellekson/Code/botany-battle-issue-2/ios/build/BotanyBattle.build/Debug-iphoneos/BotanyBattle.build/Objects-normal/arm64/ContentView.o",
+    "swift-dependencies" : "/Users/gunnarhellekson/Code/botany-battle-issue-2/ios/build/BotanyBattle.build/Debug-iphoneos/BotanyBattle.build/Objects-normal/arm64/ContentView.swiftdeps",
+    "swiftmodule" : "/Users/gunnarhellekson/Code/botany-battle-issue-2/ios/build/BotanyBattle.build/Debug-iphoneos/BotanyBattle.build/Objects-normal/arm64/ContentView~partial.swiftmodule"
+  },
+  "/Users/gunnarhellekson/Code/botany-battle-issue-2/ios/BotanyBattle/SimpleContentView.swift" : {
+    "const-values" : "/Users/gunnarhellekson/Code/botany-battle-issue-2/ios/build/BotanyBattle.build/Debug-iphoneos/BotanyBattle.build/Objects-normal/arm64/SimpleContentView.swiftconstvalues",
+    "dependencies" : "/Users/gunnarhellekson/Code/botany-battle-issue-2/ios/build/BotanyBattle.build/Debug-iphoneos/BotanyBattle.build/Objects-normal/arm64/SimpleContentView.d",
+    "diagnostics" : "/Users/gunnarhellekson/Code/botany-battle-issue-2/ios/build/BotanyBattle.build/Debug-iphoneos/BotanyBattle.build/Objects-normal/arm64/SimpleContentView.dia",
+    "index-unit-output-path" : "/BotanyBattle.build/Debug-iphoneos/BotanyBattle.build/Objects-normal/arm64/SimpleContentView.o",
+    "llvm-bc" : "/Users/gunnarhellekson/Code/botany-battle-issue-2/ios/build/BotanyBattle.build/Debug-iphoneos/BotanyBattle.build/Objects-normal/arm64/SimpleContentView.bc",
+    "object" : "/Users/gunnarhellekson/Code/botany-battle-issue-2/ios/build/BotanyBattle.build/Debug-iphoneos/BotanyBattle.build/Objects-normal/arm64/SimpleContentView.o",
+    "swift-dependencies" : "/Users/gunnarhellekson/Code/botany-battle-issue-2/ios/build/BotanyBattle.build/Debug-iphoneos/BotanyBattle.build/Objects-normal/arm64/SimpleContentView.swiftdeps",
+    "swiftmodule" : "/Users/gunnarhellekson/Code/botany-battle-issue-2/ios/build/BotanyBattle.build/Debug-iphoneos/BotanyBattle.build/Objects-normal/arm64/SimpleContentView~partial.swiftmodule"
+  },
+  "/Users/gunnarhellekson/Code/botany-battle-issue-2/ios/build/BotanyBattle.build/Debug-iphoneos/BotanyBattle.build/DerivedSources/GeneratedAssetSymbols.swift" : {
+    "const-values" : "/Users/gunnarhellekson/Code/botany-battle-issue-2/ios/build/BotanyBattle.build/Debug-iphoneos/BotanyBattle.build/Objects-normal/arm64/GeneratedAssetSymbols.swiftconstvalues",
+    "dependencies" : "/Users/gunnarhellekson/Code/botany-battle-issue-2/ios/build/BotanyBattle.build/Debug-iphoneos/BotanyBattle.build/Objects-normal/arm64/GeneratedAssetSymbols.d",
+    "diagnostics" : "/Users/gunnarhellekson/Code/botany-battle-issue-2/ios/build/BotanyBattle.build/Debug-iphoneos/BotanyBattle.build/Objects-normal/arm64/GeneratedAssetSymbols.dia",
+    "index-unit-output-path" : "/BotanyBattle.build/Debug-iphoneos/BotanyBattle.build/Objects-normal/arm64/GeneratedAssetSymbols.o",
+    "llvm-bc" : "/Users/gunnarhellekson/Code/botany-battle-issue-2/ios/build/BotanyBattle.build/Debug-iphoneos/BotanyBattle.build/Objects-normal/arm64/GeneratedAssetSymbols.bc",
+    "object" : "/Users/gunnarhellekson/Code/botany-battle-issue-2/ios/build/BotanyBattle.build/Debug-iphoneos/BotanyBattle.build/Objects-normal/arm64/GeneratedAssetSymbols.o",
+    "swift-dependencies" : "/Users/gunnarhellekson/Code/botany-battle-issue-2/ios/build/BotanyBattle.build/Debug-iphoneos/BotanyBattle.build/Objects-normal/arm64/GeneratedAssetSymbols.swiftdeps",
+    "swiftmodule" : "/Users/gunnarhellekson/Code/botany-battle-issue-2/ios/build/BotanyBattle.build/Debug-iphoneos/BotanyBattle.build/Objects-normal/arm64/GeneratedAssetSymbols~partial.swiftmodule"
+  }
+}

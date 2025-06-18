@@ -3,28 +3,63 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 56;
+	objectVersion = 70;
 	objects = {
 
 /* Begin PBXBuildFile section */
 		A1234567890123456789012A /* BotanyBattleApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890123456789012B /* BotanyBattleApp.swift */; };
 		A1234567890123456789012C /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890123456789012D /* ContentView.swift */; };
-		A12345678901234567890142 /* SimpleContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A12345678901234567890143 /* SimpleContentView.swift */; };
 		A1234567890123456789012E /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A1234567890123456789012F /* Assets.xcassets */; };
 		A12345678901234567890130 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A12345678901234567890131 /* Preview Assets.xcassets */; };
+		A12345678901234567890142 /* SimpleContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A12345678901234567890143 /* SimpleContentView.swift */; };
 		A12345678901234567890144 /* GameKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A12345678901234567890145 /* GameKit.framework */; };
+		F4FBBF5D2E0224D100624A77 /* JWTValidationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4FBBF542E0224D100624A77 /* JWTValidationTests.swift */; };
+		F4FBBF602E0224D100624A77 /* BasicUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4FBBF4B2E0224D100624A77 /* BasicUITests.swift */; };
+		F4FBBF642E0224D100624A77 /* GameCenterIntegrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4FBBF502E0224D100624A77 /* GameCenterIntegrationTests.swift */; };
+		F4FBBF652E0224D100624A77 /* AnalyticsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4FBBF462E0224D100624A77 /* AnalyticsTests.swift */; };
+		F4FBBF662E0224D100624A77 /* OfflineFunctionalityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4FBBF552E0224D100624A77 /* OfflineFunctionalityTests.swift */; };
+		F4FBBF672E0224D100624A77 /* DesignSystemTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4FBBF4D2E0224D100624A77 /* DesignSystemTests.swift */; };
+		F4FBBF682E0224D100624A77 /* AccessibilityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4FBBF452E0224D100624A77 /* AccessibilityTests.swift */; };
+		F4FBBF692E0224D100624A77 /* BasicUnitTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4FBBF4C2E0224D100624A77 /* BasicUnitTests.swift */; };
+		F4FBBF6A2E0224D100624A77 /* DeviceCompatibilityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4FBBF4E2E0224D100624A77 /* DeviceCompatibilityTests.swift */; };
+		F4FBBF6C2E0224D100624A77 /* GameCenterServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4FBBF512E0224D100624A77 /* GameCenterServiceTests.swift */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		F4FBBF402E02243100624A77 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A1234567890123456789013C /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A12345678901234567890138;
+			remoteInfo = BotanyBattle;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
-		A12345678901234567890132 /* BotanyBattle.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BotanyBattle.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A1234567890123456789012B /* BotanyBattleApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BotanyBattleApp.swift; sourceTree = "<group>"; };
 		A1234567890123456789012D /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
-		A12345678901234567890143 /* SimpleContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimpleContentView.swift; sourceTree = "<group>"; };
 		A1234567890123456789012F /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		A12345678901234567890131 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
+		A12345678901234567890132 /* BotanyBattle.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BotanyBattle.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A12345678901234567890143 /* SimpleContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimpleContentView.swift; sourceTree = "<group>"; };
 		A12345678901234567890145 /* GameKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = GameKit.framework; path = System/Library/Frameworks/GameKit.framework; sourceTree = SDKROOT; };
 		A12345678901234567890146 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		F4FBBF3C2E02243100624A77 /* Botany BattleTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Botany BattleTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		F4FBBF452E0224D100624A77 /* AccessibilityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccessibilityTests.swift; sourceTree = "<group>"; };
+		F4FBBF462E0224D100624A77 /* AnalyticsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalyticsTests.swift; sourceTree = "<group>"; };
+		F4FBBF4B2E0224D100624A77 /* BasicUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BasicUITests.swift; sourceTree = "<group>"; };
+		F4FBBF4C2E0224D100624A77 /* BasicUnitTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BasicUnitTests.swift; sourceTree = "<group>"; };
+		F4FBBF4D2E0224D100624A77 /* DesignSystemTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignSystemTests.swift; sourceTree = "<group>"; };
+		F4FBBF4E2E0224D100624A77 /* DeviceCompatibilityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceCompatibilityTests.swift; sourceTree = "<group>"; };
+		F4FBBF502E0224D100624A77 /* GameCenterIntegrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameCenterIntegrationTests.swift; sourceTree = "<group>"; };
+		F4FBBF512E0224D100624A77 /* GameCenterServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameCenterServiceTests.swift; sourceTree = "<group>"; };
+		F4FBBF542E0224D100624A77 /* JWTValidationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JWTValidationTests.swift; sourceTree = "<group>"; };
+		F4FBBF552E0224D100624A77 /* OfflineFunctionalityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineFunctionalityTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		F4FBBF3D2E02243100624A77 /* Botany BattleTests */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = "Botany BattleTests"; sourceTree = "<group>"; };
+/* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		A12345678901234567890133 /* Frameworks */ = {
@@ -35,6 +70,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		F4FBBF392E02243100624A77 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -42,6 +84,7 @@
 			isa = PBXGroup;
 			children = (
 				A12345678901234567890135 /* BotanyBattle */,
+				F4FBBF3D2E02243100624A77 /* Botany BattleTests */,
 				A12345678901234567890136 /* Products */,
 				A12345678901234567890147 /* Frameworks */,
 			);
@@ -64,6 +107,17 @@
 			isa = PBXGroup;
 			children = (
 				A12345678901234567890132 /* BotanyBattle.app */,
+				F4FBBF3C2E02243100624A77 /* Botany BattleTests.xctest */,
+				F4FBBF452E0224D100624A77 /* AccessibilityTests.swift */,
+				F4FBBF462E0224D100624A77 /* AnalyticsTests.swift */,
+				F4FBBF4B2E0224D100624A77 /* BasicUITests.swift */,
+				F4FBBF4C2E0224D100624A77 /* BasicUnitTests.swift */,
+				F4FBBF4D2E0224D100624A77 /* DesignSystemTests.swift */,
+				F4FBBF4E2E0224D100624A77 /* DeviceCompatibilityTests.swift */,
+				F4FBBF502E0224D100624A77 /* GameCenterIntegrationTests.swift */,
+				F4FBBF512E0224D100624A77 /* GameCenterServiceTests.swift */,
+				F4FBBF542E0224D100624A77 /* JWTValidationTests.swift */,
+				F4FBBF552E0224D100624A77 /* OfflineFunctionalityTests.swift */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -104,6 +158,29 @@
 			productReference = A12345678901234567890132 /* BotanyBattle.app */;
 			productType = "com.apple.product-type.application";
 		};
+		F4FBBF3B2E02243100624A77 /* Botany BattleTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F4FBBF442E02243100624A77 /* Build configuration list for PBXNativeTarget "Botany BattleTests" */;
+			buildPhases = (
+				F4FBBF382E02243100624A77 /* Sources */,
+				F4FBBF392E02243100624A77 /* Frameworks */,
+				F4FBBF3A2E02243100624A77 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				F4FBBF412E02243100624A77 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				F4FBBF3D2E02243100624A77 /* Botany BattleTests */,
+			);
+			name = "Botany BattleTests";
+			packageProductDependencies = (
+			);
+			productName = "Botany BattleTests";
+			productReference = F4FBBF3C2E02243100624A77 /* Botany BattleTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -111,11 +188,15 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
-				LastSwiftUpdateCheck = 1540;
+				LastSwiftUpdateCheck = 1640;
 				LastUpgradeCheck = 1540;
 				TargetAttributes = {
 					A12345678901234567890138 = {
 						CreatedOnToolsVersion = 15.4;
+					};
+					F4FBBF3B2E02243100624A77 = {
+						CreatedOnToolsVersion = 16.4;
+						TestTargetID = A12345678901234567890138;
 					};
 				};
 			};
@@ -133,6 +214,7 @@
 			projectRoot = "";
 			targets = (
 				A12345678901234567890138 /* BotanyBattle */,
+				F4FBBF3B2E02243100624A77 /* Botany BattleTests */,
 			);
 		};
 /* End PBXProject section */
@@ -144,6 +226,13 @@
 			files = (
 				A12345678901234567890130 /* Preview Assets.xcassets in Resources */,
 				A1234567890123456789012E /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F4FBBF3A2E02243100624A77 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -160,7 +249,32 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		F4FBBF382E02243100624A77 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F4FBBF5D2E0224D100624A77 /* JWTValidationTests.swift in Sources */,
+				F4FBBF602E0224D100624A77 /* BasicUITests.swift in Sources */,
+				F4FBBF642E0224D100624A77 /* GameCenterIntegrationTests.swift in Sources */,
+				F4FBBF652E0224D100624A77 /* AnalyticsTests.swift in Sources */,
+				F4FBBF662E0224D100624A77 /* OfflineFunctionalityTests.swift in Sources */,
+				F4FBBF672E0224D100624A77 /* DesignSystemTests.swift in Sources */,
+				F4FBBF682E0224D100624A77 /* AccessibilityTests.swift in Sources */,
+				F4FBBF692E0224D100624A77 /* BasicUnitTests.swift in Sources */,
+				F4FBBF6A2E0224D100624A77 /* DeviceCompatibilityTests.swift in Sources */,
+				F4FBBF6C2E0224D100624A77 /* GameCenterServiceTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		F4FBBF412E02243100624A77 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A12345678901234567890138 /* BotanyBattle */;
+			targetProxy = F4FBBF402E02243100624A77 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		A1234567890123456789013E /* Debug */ = {
@@ -338,6 +452,42 @@
 			};
 			name = Release;
 		};
+		F4FBBF422E02243100624A77 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "name.gunnarhellekson.Botany-BattleTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/BotanyBattle.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/BotanyBattle";
+			};
+			name = Debug;
+		};
+		F4FBBF432E02243100624A77 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "name.gunnarhellekson.Botany-BattleTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/BotanyBattle.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/BotanyBattle";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -355,6 +505,15 @@
 			buildConfigurations = (
 				A1234567890123456789013E /* Debug */,
 				A1234567890123456789013F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		F4FBBF442E02243100624A77 /* Build configuration list for PBXNativeTarget "Botany BattleTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F4FBBF422E02243100624A77 /* Debug */,
+				F4FBBF432E02243100624A77 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
