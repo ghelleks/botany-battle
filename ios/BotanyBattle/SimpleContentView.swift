@@ -781,6 +781,8 @@ struct GameScreenView: View {
     @State private var isCorrect = false
     @State private var gameComplete = false
     @State private var correctAnswers = 0
+    @State private var gameStartTime = Date()
+    @State private var gameEndTime = Date()
     
     // Sample plant question with actual plant images
     @State private var currentPlant = PlantQuestion(
@@ -909,6 +911,7 @@ struct GameScreenView: View {
                     finalScore: score,
                     correctAnswers: correctAnswers,
                     totalQuestions: 5,
+                    elapsedTime: gameEndTime.timeIntervalSince(gameStartTime),
                     onPlayAgain: {
                         resetGame()
                     },
@@ -917,6 +920,7 @@ struct GameScreenView: View {
             }
         }
         .onAppear {
+            gameStartTime = Date()
             startTimer()
         }
     }
@@ -931,17 +935,13 @@ struct GameScreenView: View {
         }
         
         showResult = true
-        
-        // Auto advance after 3 seconds for practice mode, 2 seconds for others
-        let delay = gameMode == .practice ? 3.0 : 2.0
-        DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
-            nextQuestion()
-        }
+        // No auto-advance - user must click "Next Question" button
     }
     
     private func nextQuestion() {
         if currentQuestion >= 5 {
             // Game over - show results
+            gameEndTime = Date()
             gameComplete = true
             return
         }
@@ -980,6 +980,8 @@ struct GameScreenView: View {
         selectedAnswer = nil
         showResult = false
         gameComplete = false
+        gameStartTime = Date()
+        gameEndTime = Date()
         
         // Reset to first plant
         currentPlant = PlantQuestion(
@@ -1037,6 +1039,7 @@ struct GameResultsView: View {
     let finalScore: Int
     let correctAnswers: Int
     let totalQuestions: Int
+    let elapsedTime: TimeInterval?
     let onPlayAgain: () -> Void
     let onExit: () -> Void
     
@@ -1060,6 +1063,13 @@ struct GameResultsView: View {
         case 0.6...0.79: return .orange
         default: return .red
         }
+    }
+    
+    private var formattedTime: String {
+        guard let elapsedTime = elapsedTime else { return "" }
+        let minutes = Int(elapsedTime) / 60
+        let seconds = Int(elapsedTime) % 60
+        return String(format: "%d:%02d", minutes, seconds)
     }
     
     var body: some View {
@@ -1094,47 +1104,97 @@ struct GameResultsView: View {
                     
                     // Performance Section
                     VStack(spacing: 16) {
-                        HStack(spacing: 32) {
-                            VStack {
-                                Text("\(correctAnswers)")
-                                    .font(.title)
-                                    .fontWeight(.bold)
-                                    .foregroundColor(.green)
-                                Text("Correct")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
+                        if elapsedTime != nil {
+                            // Time Attack mode - show 4 stats in 2x2 grid
+                            VStack(spacing: 16) {
+                                HStack(spacing: 32) {
+                                    VStack {
+                                        Text("\(correctAnswers)")
+                                            .font(.title)
+                                            .fontWeight(.bold)
+                                            .foregroundColor(.green)
+                                        Text("Correct")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                    }
+                                    
+                                    VStack {
+                                        Text("\(totalQuestions - correctAnswers)")
+                                            .font(.title)
+                                            .fontWeight(.bold)
+                                            .foregroundColor(.red)
+                                        Text("Wrong")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                    }
+                                }
+                                
+                                HStack(spacing: 32) {
+                                    VStack {
+                                        Text("\(Int(accuracy * 100))%")
+                                            .font(.title)
+                                            .fontWeight(.bold)
+                                            .foregroundColor(performanceColor)
+                                        Text("Accuracy")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                    }
+                                    
+                                    VStack {
+                                        Text(formattedTime)
+                                            .font(.title)
+                                            .fontWeight(.bold)
+                                            .foregroundColor(.blue)
+                                        Text("Time")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                    }
+                                }
                             }
-                            
-                            VStack {
-                                Text("\(totalQuestions - correctAnswers)")
-                                    .font(.title)
-                                    .fontWeight(.bold)
-                                    .foregroundColor(.red)
-                                Text("Wrong")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
-                            
-                            VStack {
-                                Text("\(Int(accuracy * 100))%")
-                                    .font(.title)
-                                    .fontWeight(.bold)
-                                    .foregroundColor(performanceColor)
-                                Text("Accuracy")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
+                        } else {
+                            // Other modes - show 3 stats in single row
+                            HStack(spacing: 32) {
+                                VStack {
+                                    Text("\(correctAnswers)")
+                                        .font(.title)
+                                        .fontWeight(.bold)
+                                        .foregroundColor(.green)
+                                    Text("Correct")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+                                
+                                VStack {
+                                    Text("\(totalQuestions - correctAnswers)")
+                                        .font(.title)
+                                        .fontWeight(.bold)
+                                        .foregroundColor(.red)
+                                    Text("Wrong")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+                                
+                                VStack {
+                                    Text("\(Int(accuracy * 100))%")
+                                        .font(.title)
+                                        .fontWeight(.bold)
+                                        .foregroundColor(performanceColor)
+                                    Text("Accuracy")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
                             }
                         }
-                        .padding()
-                        .background(Color(.systemGray6))
-                        .cornerRadius(12)
-                        
-                        Text(performanceMessage)
-                            .font(.title3)
-                            .fontWeight(.medium)
-                            .multilineTextAlignment(.center)
-                            .foregroundColor(performanceColor)
                     }
+                    .padding()
+                    .background(Color(.systemGray6))
+                    .cornerRadius(12)
+                        
+                    Text(performanceMessage)
+                        .font(.title3)
+                        .fontWeight(.medium)
+                        .multilineTextAlignment(.center)
+                        .foregroundColor(performanceColor)
                 }
                 
                 Spacer()
