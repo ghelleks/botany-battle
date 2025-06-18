@@ -347,8 +347,8 @@ struct AnswerFeedbackView: View {
                     .foregroundColor(.secondary)
             }
             
-            if let fact = plant.interestingFact {
-                Text(fact)
+            if let description = plant.description {
+                Text(description)
                     .botanicalStyle(BotanicalTextStyle.caption)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)

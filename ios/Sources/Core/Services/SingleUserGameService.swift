@@ -38,6 +38,10 @@ final class SingleUserGameService: SingleUserGameServiceProtocol {
     
     private let savedSessionKey = "current_single_user_session"
     
+    init() {
+        print("🚀 [SingleUserGameService] LIVE SERVICE INITIALIZED - This should appear if real game service is being used")
+    }
+    
     // Cache for current game session plants to avoid repeated API calls
     private var sessionPlantCache: [String: Plant] = [:]
     private var sessionPlantOptions: [String: [String]] = [:]
@@ -68,6 +72,8 @@ final class SingleUserGameService: SingleUserGameServiceProtocol {
         // Offline-first approach: Try cache first, then API
         var plants: [Plant] = []
         
+        print("🌱 [SingleUserGameService] Loading plants for difficulty: \(session.difficulty)")
+        
         do {
             // First try to get cached plants for this difficulty
             let cachedPlants = try await plantCacheService.getCachedPlants(
@@ -75,38 +81,51 @@ final class SingleUserGameService: SingleUserGameServiceProtocol {
                 limit: 20
             )
             
+            print("🌱 [SingleUserGameService] Found \(cachedPlants.count) cached plants")
+            
             if cachedPlants.count >= 4 {
                 // We have enough cached plants, use them
                 plants = Array(cachedPlants.shuffled().prefix(4))
+                print("🌱 [SingleUserGameService] Using cached plants: \(plants.map { $0.primaryCommonName })")
             } else {
                 // Not enough cached plants, try to fetch from API
+                print("🌱 [SingleUserGameService] Not enough cached plants, fetching from API...")
                 do {
                     let fetchedPlants = try await plantAPIService.fetchPopularPlants(
                         difficulty: session.difficulty,
                         limit: 4
                     )
                     
+                    print("🌱 [SingleUserGameService] API returned \(fetchedPlants.count) plants: \(fetchedPlants.map { $0.primaryCommonName })")
+                    
                     // Cache the newly fetched plants for future offline use
                     try await plantCacheService.cachePlants(fetchedPlants)
                     plants = fetchedPlants
                     
                 } catch {
+                    print("🌱 [SingleUserGameService] API failed: \(error)")
                     // API failed, use whatever cached plants we have
                     if !cachedPlants.isEmpty {
                         plants = cachedPlants
+                        print("🌱 [SingleUserGameService] Falling back to cached plants: \(plants.map { $0.primaryCommonName })")
                     } else {
+                        print("🌱 [SingleUserGameService] No plants available, throwing error")
                         throw SingleUserGameError.noPlantDataAvailable
                     }
                 }
             }
         } catch {
+            print("🌱 [SingleUserGameService] Cache failed: \(error)")
             // Cache also failed, try API as last resort
             do {
+                print("🌱 [SingleUserGameService] Trying API as last resort...")
                 plants = try await plantAPIService.fetchPopularPlants(
                     difficulty: session.difficulty,
                     limit: 4
                 )
+                print("🌱 [SingleUserGameService] API last resort returned \(plants.count) plants: \(plants.map { $0.primaryCommonName })")
             } catch {
+                print("🌱 [SingleUserGameService] All sources failed: \(error)")
                 throw SingleUserGameError.noPlantDataAvailable
             }
         }
@@ -284,6 +303,10 @@ private enum SingleUserGameServiceKey: DependencyKey {
 // Mock service for testing
 final class MockSingleUserGameService: SingleUserGameServiceProtocol {
     private var savedSession: SingleUserGameSession?
+    
+    init() {
+        print("⚠️ [MockSingleUserGameService] MOCK SERVICE INITIALIZED - This should NOT appear in live app!")
+    }
     
     func startGame(mode: GameMode, difficulty: Game.Difficulty) -> SingleUserGameSession {
         let session = SingleUserGameSession(mode: mode, difficulty: difficulty)

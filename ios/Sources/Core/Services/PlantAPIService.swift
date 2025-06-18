@@ -134,6 +134,7 @@ final class PlantAPIService: PlantAPIServiceProtocol {
     private let decoder: JSONDecoder
     
     init() {
+        print("🚀 [PlantAPIService] LIVE SERVICE INITIALIZED - This should appear if real API service is being used")
         let config = URLSessionConfiguration.default
         config.timeoutIntervalForRequest = 30
         config.timeoutIntervalForResource = 60
@@ -153,6 +154,9 @@ final class PlantAPIService: PlantAPIServiceProtocol {
     // MARK: - Public API Methods
     
     func fetchPopularPlants(difficulty: Game.Difficulty, limit: Int) async throws -> [Plant] {
+        print("🌐 [PlantAPIService] fetchPopularPlants called with difficulty: \(difficulty), limit: \(limit)")
+        print("🌐 [PlantAPIService] *** REAL INATURALIST API SERVICE - NOT MOCK ***")
+        
         let observationRange = getObservationRangeForDifficulty(difficulty)
         
         var components = URLComponents(string: "\(iNaturalistAPIConfig.baseURL)/taxa")!
@@ -167,7 +171,11 @@ final class PlantAPIService: PlantAPIServiceProtocol {
             URLQueryItem(name: "max_observations", value: String(observationRange.max))
         ]
         
-        return try await performRequest(url: components.url!)
+        print("🌐 [PlantAPIService] Making request to: \(components.url!)")
+        
+        let plants = try await performRequest(url: components.url!)
+        print("🌐 [PlantAPIService] Successfully fetched \(plants.count) plants")
+        return plants
     }
     
     func searchPlants(query: String, limit: Int) async throws -> [Plant] {
@@ -294,6 +302,7 @@ final class MockPlantAPIService: PlantAPIServiceProtocol {
     private let delay: TimeInterval
     
     init(shouldFail: Bool = false, delay: TimeInterval = 0.5) {
+        print("⚠️ [MockPlantAPIService] MOCK SERVICE INITIALIZED - This should NOT appear in live app!")
         self.shouldFail = shouldFail
         self.delay = delay
     }
