@@ -1,4 +1,5 @@
 import SwiftUI
+import GameKit
 
 // Simple demo version without external dependencies
 struct SimpleContentView: View {
@@ -116,10 +117,51 @@ struct SimpleMainTabView: View {
 }
 
 struct SimpleGameView: View {
-    @State private var isSearching = false
+    @State private var selectedGameMode: GameMode?
     @State private var difficulty = "Medium"
+    @State private var isSearching = false
+    @State private var showGameCenterPrompt = false
+    @State private var showGameScreen = false
+    @State private var currentGameMode: GameMode?
     
     let difficulties = ["Easy", "Medium", "Hard", "Expert"]
+    
+    enum GameMode: String, CaseIterable {
+        case practice = "Practice Mode"
+        case timeAttack = "Time Attack"
+        case dailyChallenge = "Daily Challenge"
+        case multiplayer = "Multiplayer Battle"
+        
+        var description: String {
+            switch self {
+            case .practice:
+                return "Learn at your own pace with unlimited time"
+            case .timeAttack:
+                return "Race against the clock to identify plants"
+            case .dailyChallenge:
+                return "Complete today's special challenge"
+            case .multiplayer:
+                return "Battle other players in real-time"
+            }
+        }
+        
+        var icon: String {
+            switch self {
+            case .practice:
+                return "book.fill"
+            case .timeAttack:
+                return "timer"
+            case .dailyChallenge:
+                return "calendar.badge.plus"
+            case .multiplayer:
+                return "person.2.fill"
+            }
+        }
+        
+        var requiresGameCenter: Bool {
+            return self == .multiplayer
+        }
+    }
     
     var body: some View {
         NavigationView {
@@ -129,44 +171,51 @@ struct SimpleGameView: View {
                         .font(.largeTitle)
                         .fontWeight(.bold)
                     
-                    Text("Test your botanical knowledge")
+                    Text("Choose your adventure")
                         .font(.title2)
                         .foregroundColor(.secondary)
                 }
                 
+                // Game Mode Selection
                 VStack(spacing: 16) {
-                    Text("Choose Difficulty")
+                    Text("Game Mode")
                         .font(.headline)
                     
                     VStack(spacing: 12) {
-                        ForEach(difficulties, id: \.self) { diff in
+                        ForEach(GameMode.allCases, id: \.self) { mode in
                             Button(action: {
-                                difficulty = diff
-                                isSearching = true
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                                    isSearching = false
-                                }
+                                selectGameMode(mode)
                             }) {
                                 HStack {
-                                    VStack(alignment: .leading) {
-                                        Text(diff)
+                                    Image(systemName: mode.icon)
+                                        .font(.title2)
+                                        .foregroundColor(.green)
+                                        .frame(width: 30)
+                                    
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text(mode.rawValue)
                                             .font(.headline)
-                                            .foregroundColor(difficulty == diff ? .white : .primary)
+                                            .foregroundColor(.primary)
                                         
-                                        Text(timeForDifficulty(diff))
+                                        Text(mode.description)
                                             .font(.caption)
-                                            .foregroundColor(difficulty == diff ? .white.opacity(0.8) : .secondary)
+                                            .foregroundColor(.secondary)
                                     }
                                     
                                     Spacer()
                                     
-                                    if difficulty == diff {
-                                        Image(systemName: "checkmark.circle.fill")
-                                            .foregroundColor(.white)
+                                    if mode.requiresGameCenter {
+                                        Image(systemName: "gamecontroller.fill")
+                                            .font(.caption)
+                                            .foregroundColor(.orange)
                                     }
+                                    
+                                    Image(systemName: "chevron.right")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
                                 }
                                 .padding()
-                                .background(difficulty == diff ? Color.green : Color(.systemGray6))
+                                .background(Color(.systemGray6))
                                 .cornerRadius(12)
                             }
                             .buttonStyle(PlainButtonStyle())
@@ -180,7 +229,7 @@ struct SimpleGameView: View {
                             .scaleEffect(1.5)
                             .tint(.green)
                         
-                        Text("Finding an opponent...")
+                        Text("Starting game...")
                             .font(.title2)
                         
                         Button("Cancel") {
@@ -194,6 +243,80 @@ struct SimpleGameView: View {
             }
             .padding()
             .navigationTitle("Botany Battle")
+            .sheet(isPresented: $showGameCenterPrompt) {
+                GameCenterPromptView(onConnect: connectToGameCenter, onCancel: {
+                    showGameCenterPrompt = false
+                })
+            }
+            .fullScreenCover(isPresented: $showGameScreen) {
+                if let gameMode = currentGameMode {
+                    GameScreenView(gameMode: gameMode, onExit: {
+                        showGameScreen = false
+                        currentGameMode = nil
+                    })
+                }
+            }
+        }
+    }
+    
+    private func selectGameMode(_ mode: GameMode) {
+        selectedGameMode = mode
+        
+        if mode.requiresGameCenter {
+            // Check if Game Center is already authenticated
+            if GKLocalPlayer.local.isAuthenticated {
+                startMultiplayerGame()
+            } else {
+                showGameCenterPrompt = true
+            }
+        } else {
+            startSinglePlayerGame(mode: mode)
+        }
+    }
+    
+    private func startSinglePlayerGame(mode: GameMode) {
+        isSearching = true
+        currentGameMode = mode
+        // Simulate game start delay
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+            isSearching = false
+            showGameScreen = true
+        }
+    }
+    
+    private func startMultiplayerGame() {
+        isSearching = true
+        // Simulate finding opponent
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+            isSearching = false
+            // Here you would start matchmaking and navigate to multiplayer game
+            print("Starting multiplayer game")
+        }
+    }
+    
+    private func connectToGameCenter() {
+        showGameCenterPrompt = false
+        
+        // Attempt Game Center authentication
+        GKLocalPlayer.local.authenticateHandler = { viewController, error in
+            DispatchQueue.main.async {
+                if let error = error {
+                    print("Game Center authentication failed: \(error.localizedDescription)")
+                    return
+                }
+                
+                if let viewController = viewController {
+                    // In a real app, present the view controller
+                    print("Present Game Center authentication view controller")
+                    return
+                }
+                
+                if GKLocalPlayer.local.isAuthenticated {
+                    startMultiplayerGame()
+                } else {
+                    print("Game Center authentication failed")
+                }
+            }
         }
     }
     
@@ -580,6 +703,478 @@ struct SimpleTutorialView: View {
             .padding()
         }
     }
+}
+
+struct GameCenterPromptView: View {
+    let onConnect: () -> Void
+    let onCancel: () -> Void
+    
+    var body: some View {
+        NavigationView {
+            VStack(spacing: 32) {
+                Spacer()
+                
+                VStack(spacing: 16) {
+                    Image(systemName: "gamecontroller.fill")
+                        .font(.system(size: 60))
+                        .foregroundColor(.orange)
+                    
+                    Text("Game Center Required")
+                        .font(.title)
+                        .fontWeight(.bold)
+                    
+                    Text("Multiplayer battles require Game Center to connect with other players. You can enjoy single-player modes without Game Center.")
+                        .font(.body)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
+                }
+                
+                VStack(spacing: 12) {
+                    Button("Connect to Game Center") {
+                        onConnect()
+                    }
+                    .font(.headline)
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.green)
+                    .cornerRadius(12)
+                    
+                    Button("Try Single-Player Instead") {
+                        onCancel()
+                    }
+                    .font(.headline)
+                    .foregroundColor(.green)
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.green.opacity(0.1))
+                    .cornerRadius(12)
+                }
+                .padding(.horizontal)
+                
+                Spacer()
+            }
+            .padding()
+            .navigationTitle("Multiplayer")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Cancel") {
+                        onCancel()
+                    }
+                }
+            }
+        }
+    }
+}
+
+struct GameScreenView: View {
+    let gameMode: SimpleGameView.GameMode
+    let onExit: () -> Void
+    
+    @State private var currentQuestion = 1
+    @State private var score = 0
+    @State private var timeRemaining = 30
+    @State private var selectedAnswer: Int?
+    @State private var showResult = false
+    @State private var isCorrect = false
+    @State private var gameComplete = false
+    @State private var correctAnswers = 0
+    
+    // Sample plant question with actual plant images
+    @State private var currentPlant = PlantQuestion(
+        imageName: "🌳",
+        correctAnswer: "Oak Tree",
+        options: ["Oak Tree", "Maple Tree", "Pine Tree", "Birch Tree"],
+        fact: "Oak trees can live for over 1,000 years and support over 500 species of wildlife."
+    )
+    
+    var body: some View {
+        NavigationView {
+            VStack(spacing: 24) {
+                // Header
+                VStack(spacing: 8) {
+                    HStack {
+                        Text("Question \(currentQuestion)/5")
+                            .font(.headline)
+                            .foregroundColor(.secondary)
+                        
+                        Spacer()
+                        
+                        HStack(spacing: 4) {
+                            Image(systemName: "timer")
+                                .foregroundColor(.orange)
+                            Text("\(timeRemaining)s")
+                                .font(.headline)
+                                .foregroundColor(.orange)
+                        }
+                    }
+                    
+                    HStack {
+                        Text("Score: \(score)")
+                            .font(.title2)
+                            .fontWeight(.semibold)
+                        
+                        Spacer()
+                        
+                        Text(gameMode.rawValue)
+                            .font(.caption)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 4)
+                            .background(Color.green.opacity(0.2))
+                            .cornerRadius(8)
+                    }
+                }
+                
+                // Plant Image
+                VStack(spacing: 16) {
+                    Text(currentPlant.imageName)
+                        .font(.system(size: 120))
+                        .frame(height: 150)
+                        .background(Color(.systemGray6))
+                        .cornerRadius(12)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(Color.green, lineWidth: 2)
+                        )
+                    
+                    Text("What plant is this?")
+                        .font(.title2)
+                        .fontWeight(.medium)
+                }
+                
+                // Answer Options
+                VStack(spacing: 12) {
+                    ForEach(Array(currentPlant.options.enumerated()), id: \.offset) { index, option in
+                        Button(action: {
+                            selectAnswer(index)
+                        }) {
+                            HStack {
+                                Text(option)
+                                    .font(.headline)
+                                    .foregroundColor(getAnswerTextColor(index))
+                                
+                                Spacer()
+                                
+                                if selectedAnswer == index {
+                                    Image(systemName: isCorrect ? "checkmark.circle.fill" : "xmark.circle.fill")
+                                        .foregroundColor(isCorrect ? .green : .red)
+                                }
+                            }
+                            .padding()
+                            .background(getAnswerBackgroundColor(index))
+                            .cornerRadius(12)
+                        }
+                        .disabled(selectedAnswer != nil)
+                    }
+                }
+                
+                Spacer()
+                
+                if showResult && !gameComplete {
+                    VStack(spacing: 12) {
+                        Text(currentPlant.fact)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal)
+                        
+                        Button("Next Question") {
+                            nextQuestion()
+                        }
+                        .font(.headline)
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color.green)
+                        .cornerRadius(12)
+                    }
+                }
+            }
+            .padding()
+            .navigationTitle("Plant Battle")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Exit") {
+                        onExit()
+                    }
+                    .foregroundColor(.red)
+                }
+            }
+            .fullScreenCover(isPresented: $gameComplete) {
+                GameResultsView(
+                    gameMode: gameMode,
+                    finalScore: score,
+                    correctAnswers: correctAnswers,
+                    totalQuestions: 5,
+                    onPlayAgain: {
+                        resetGame()
+                    },
+                    onExit: onExit
+                )
+            }
+        }
+        .onAppear {
+            startTimer()
+        }
+    }
+    
+    private func selectAnswer(_ index: Int) {
+        selectedAnswer = index
+        isCorrect = currentPlant.options[index] == currentPlant.correctAnswer
+        
+        if isCorrect {
+            score += 10
+            correctAnswers += 1
+        }
+        
+        showResult = true
+        
+        // Auto advance after 3 seconds for practice mode, 2 seconds for others
+        let delay = gameMode == .practice ? 3.0 : 2.0
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+            nextQuestion()
+        }
+    }
+    
+    private func nextQuestion() {
+        if currentQuestion >= 5 {
+            // Game over - show results
+            gameComplete = true
+            return
+        }
+        
+        currentQuestion += 1
+        selectedAnswer = nil
+        showResult = false
+        timeRemaining = getTimeForGameMode()
+        
+        // Generate new question with diverse plant emojis and facts
+        let plants = [
+            ("🌳", "Oak Tree", ["Oak Tree", "Maple Tree", "Pine Tree", "Birch Tree"], "Oak trees can live for over 1,000 years and support over 500 species of wildlife."),
+            ("🌲", "Pine Tree", ["Pine Tree", "Oak Tree", "Willow Tree", "Cedar Tree"], "Pine trees are evergreen conifers that can survive in harsh winter conditions."),
+            ("🍁", "Maple Tree", ["Maple Tree", "Elm Tree", "Ash Tree", "Beech Tree"], "Maple trees produce the sweet sap used to make maple syrup."),
+            ("🌴", "Palm Tree", ["Palm Tree", "Bamboo", "Fern", "Cactus"], "Palm trees are tropical plants that can grow up to 200 feet tall."),
+            ("🌵", "Cactus", ["Cactus", "Succulent", "Aloe", "Agave"], "Cacti store water in their thick stems and can survive without rain for years."),
+            ("🌿", "Fern", ["Fern", "Moss", "Lichen", "Ivy"], "Ferns reproduce through spores rather than seeds and love humid environments."),
+            ("🌾", "Wheat", ["Wheat", "Rice", "Corn", "Barley"], "Wheat is one of the world's most important cereal grains and food sources."),
+            ("🌻", "Sunflower", ["Sunflower", "Daisy", "Marigold", "Zinnia"], "Sunflowers can grow up to 12 feet tall and always face the sun.")
+        ]
+        let randomPlant = plants.randomElement()!
+        currentPlant = PlantQuestion(
+            imageName: randomPlant.0,
+            correctAnswer: randomPlant.1,
+            options: randomPlant.2.shuffled(),
+            fact: randomPlant.3
+        )
+        
+        startTimer()
+    }
+    
+    private func resetGame() {
+        currentQuestion = 1
+        score = 0
+        correctAnswers = 0
+        selectedAnswer = nil
+        showResult = false
+        gameComplete = false
+        
+        // Reset to first plant
+        currentPlant = PlantQuestion(
+            imageName: "🌳",
+            correctAnswer: "Oak Tree",
+            options: ["Oak Tree", "Maple Tree", "Pine Tree", "Birch Tree"],
+            fact: "Oak trees can live for over 1,000 years and support over 500 species of wildlife."
+        )
+        
+        startTimer()
+    }
+    
+    private func startTimer() {
+        timeRemaining = getTimeForGameMode()
+        
+        Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { timer in
+            if timeRemaining > 0 && selectedAnswer == nil {
+                timeRemaining -= 1
+            } else {
+                timer.invalidate()
+                if selectedAnswer == nil {
+                    // Time's up
+                    nextQuestion()
+                }
+            }
+        }
+    }
+    
+    private func getTimeForGameMode() -> Int {
+        switch gameMode {
+        case .practice: return 60 // Unlimited time for practice
+        case .timeAttack: return 15
+        case .dailyChallenge: return 30
+        case .multiplayer: return 20
+        }
+    }
+    
+    private func getAnswerTextColor(_ index: Int) -> Color {
+        if selectedAnswer == index {
+            return isCorrect ? .white : .white
+        }
+        return .primary
+    }
+    
+    private func getAnswerBackgroundColor(_ index: Int) -> Color {
+        if selectedAnswer == index {
+            return isCorrect ? .green : .red
+        }
+        return Color(.systemGray6)
+    }
+}
+
+struct GameResultsView: View {
+    let gameMode: SimpleGameView.GameMode
+    let finalScore: Int
+    let correctAnswers: Int
+    let totalQuestions: Int
+    let onPlayAgain: () -> Void
+    let onExit: () -> Void
+    
+    private var accuracy: Double {
+        return Double(correctAnswers) / Double(totalQuestions)
+    }
+    
+    private var performanceMessage: String {
+        switch accuracy {
+        case 1.0: return "Perfect! You're a true botanist! 🌟"
+        case 0.8...0.99: return "Excellent work! You know your plants! 🌿"
+        case 0.6...0.79: return "Good job! Keep learning about plants! 🌱"
+        case 0.4...0.59: return "Not bad! Practice makes perfect! 🌳"
+        default: return "Keep trying! Every expert was once a beginner! 🌿"
+        }
+    }
+    
+    private var performanceColor: Color {
+        switch accuracy {
+        case 0.8...1.0: return .green
+        case 0.6...0.79: return .orange
+        default: return .red
+        }
+    }
+    
+    var body: some View {
+        NavigationView {
+            VStack(spacing: 32) {
+                Spacer()
+                
+                VStack(spacing: 16) {
+                    Text("🎉")
+                        .font(.system(size: 80))
+                    
+                    Text("Game Complete!")
+                        .font(.largeTitle)
+                        .fontWeight(.bold)
+                    
+                    Text(gameMode.rawValue)
+                        .font(.title2)
+                        .foregroundColor(.secondary)
+                }
+                
+                VStack(spacing: 24) {
+                    // Score Section
+                    VStack(spacing: 12) {
+                        Text("Your Score")
+                            .font(.headline)
+                            .foregroundColor(.secondary)
+                        
+                        Text("\(finalScore)")
+                            .font(.system(size: 60, weight: .bold, design: .rounded))
+                            .foregroundColor(performanceColor)
+                    }
+                    
+                    // Performance Section
+                    VStack(spacing: 16) {
+                        HStack(spacing: 32) {
+                            VStack {
+                                Text("\(correctAnswers)")
+                                    .font(.title)
+                                    .fontWeight(.bold)
+                                    .foregroundColor(.green)
+                                Text("Correct")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                            
+                            VStack {
+                                Text("\(totalQuestions - correctAnswers)")
+                                    .font(.title)
+                                    .fontWeight(.bold)
+                                    .foregroundColor(.red)
+                                Text("Wrong")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                            
+                            VStack {
+                                Text("\(Int(accuracy * 100))%")
+                                    .font(.title)
+                                    .fontWeight(.bold)
+                                    .foregroundColor(performanceColor)
+                                Text("Accuracy")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                        .padding()
+                        .background(Color(.systemGray6))
+                        .cornerRadius(12)
+                        
+                        Text(performanceMessage)
+                            .font(.title3)
+                            .fontWeight(.medium)
+                            .multilineTextAlignment(.center)
+                            .foregroundColor(performanceColor)
+                    }
+                }
+                
+                Spacer()
+                
+                VStack(spacing: 12) {
+                    Button("Play Again") {
+                        onPlayAgain()
+                    }
+                    .font(.headline)
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.green)
+                    .cornerRadius(12)
+                    
+                    Button("Back to Menu") {
+                        onExit()
+                    }
+                    .font(.headline)
+                    .foregroundColor(.green)
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.green.opacity(0.1))
+                    .cornerRadius(12)
+                }
+                .padding(.horizontal)
+            }
+            .padding()
+            .navigationTitle("Results")
+            .navigationBarTitleDisplayMode(.inline)
+            .navigationBarHidden(true)
+        }
+    }
+}
+
+struct PlantQuestion {
+    let imageName: String
+    let correctAnswer: String
+    let options: [String]
+    let fact: String
 }
 
 struct TutorialStep {

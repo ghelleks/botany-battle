@@ -17,15 +17,15 @@ final class OfflineFunctionalityTests: XCTestCase {
     
     func testOfflineGameState() {
         // Test offline game state persistence
-        let gameData = [
+        let gameData: [String: Any] = [
             "current_level": 5,
             "score": 1000,
             "difficulty": "medium"
         ]
         
-        XCTAssertEqual(gameData["current_level"], 5)
-        XCTAssertEqual(gameData["score"], 1000)
-        XCTAssertEqual(gameData["difficulty"], "medium")
+        XCTAssertEqual(gameData["current_level"] as? Int, 5)
+        XCTAssertEqual(gameData["score"] as? Int, 1000)
+        XCTAssertEqual(gameData["difficulty"] as? String, "medium")
     }
     
     func testNetworkConnectivity() {
