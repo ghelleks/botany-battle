@@ -1,3 +1,8 @@
 .DS_Store
 ios/node_modules/
 ios/package*.json
+
+# Xcode user-specific files
+*.xcuserstate
+ios/BotanyBattle.xcodeproj/project.xcworkspace/xcuserdata/
+ios/BotanyBattle.xcodeproj/xcuserdata/
