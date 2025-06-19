@@ -3,6 +3,54 @@ import GameKit
 
 // Simple iNaturalist API service
 struct SimplePlantAPIService {
+    static func generateInterestingFact(for plantName: String, scientificName: String) -> String {
+        // General plant facts
+        let generalFacts = [
+            "This plant can photosynthesize sunlight into energy through its leaves.",
+            "Like all plants, this species produces oxygen as a byproduct of photosynthesis.",
+            "This plant species has adapted to survive in various environmental conditions.",
+            "The leaves of this plant contain chlorophyll, giving them their green color.",
+            "This species can reproduce both sexually through seeds and asexually through vegetative propagation."
+        ]
+        
+        // Specific plant facts based on common names
+        let specificFacts: [String: String] = [
+            "ivy": "Ivy plants are excellent climbers and can attach to surfaces using aerial rootlets.",
+            "oak": "Oak trees can live for hundreds of years and support over 500 species of wildlife.",
+            "maple": "Maple trees are famous for their brilliant fall colors and sweet sap used to make syrup.",
+            "rose": "Roses have been cultivated for over 5,000 years and come in thousands of varieties.",
+            "fern": "Ferns are among the oldest plant groups on Earth, reproducing through spores instead of seeds.",
+            "moss": "Mosses are non-vascular plants that absorb water and nutrients directly through their leaves.",
+            "grass": "Grasses are monocots with parallel leaf veins and can regrow from their base when cut.",
+            "pine": "Pine trees are conifers that produce cones and keep their needle-like leaves year-round.",
+            "willow": "Willow bark contains salicin, which was used historically as a pain reliever.",
+            "mint": "Mint plants contain menthol oils that give them their characteristic cooling sensation.",
+            "sage": "Sage has been used for centuries in both culinary and medicinal applications.",
+            "lavender": "Lavender is known for its calming fragrance and is often used in aromatherapy.",
+            "daisy": "Daisies are composite flowers, meaning what looks like one flower is actually many tiny flowers.",
+            "sunflower": "Sunflowers can grow up to 12 feet tall and their heads follow the sun across the sky.",
+            "violet": "Violets are edible flowers often used to decorate cakes and salads.",
+            "thistle": "Thistles have spiny leaves as protection but produce nectar that attracts butterflies and bees.",
+            "clover": "Clover plants fix nitrogen in the soil, making it more fertile for other plants.",
+            "dandelion": "Every part of a dandelion is edible, from the flowers to the roots.",
+            "mustard": "Mustard plants belong to the same family as broccoli, cabbage, and kale.",
+            "plantain": "Plantain leaves have natural antibiotic properties and were called 'nature's bandage' by early settlers.",
+            "yarrow": "Yarrow has been used medicinally for thousands of years to help heal wounds and reduce inflammation.",
+            "nettle": "Stinging nettles are rich in vitamins and minerals and can be cooked like spinach when young."
+        ]
+        
+        // Check if plant name contains any of our specific keywords
+        let lowerName = plantName.lowercased()
+        for (keyword, specificFact) in specificFacts {
+            if lowerName.contains(keyword) {
+                return specificFact
+            }
+        }
+        
+        // Return a random general fact if no specific match found
+        return generalFacts.randomElement() ?? generalFacts[0]
+    }
+    
     static func fetchPlants() async -> [PlantData] {
         guard let url = URL(string: "https://api.inaturalist.org/v1/taxa?taxon_id=47126&rank=species&per_page=20&order_by=observations_count&order=desc&photos=true&min_observations=1000") else {
             print("❌ Invalid URL")
@@ -24,7 +72,7 @@ struct SimplePlantAPIService {
                     name: name,
                     scientificName: taxon.name,
                     imageURL: photo,
-                    description: "A plant with \(taxon.observations_count) observations on iNaturalist."
+                    description: generateInterestingFact(for: name, scientificName: taxon.name)
                 )
             }
             
@@ -949,9 +997,17 @@ struct GameScreenView: View {
                                 
                                 Spacer()
                                 
-                                if selectedAnswer == index {
-                                    Image(systemName: isCorrect ? "checkmark.circle.fill" : "xmark.circle.fill")
-                                        .foregroundColor(isCorrect ? .green : .red)
+                                // Show icons after answer selection
+                                if selectedAnswer != nil {
+                                    if isCorrectAnswer(index) {
+                                        // Always show checkmark for correct answer
+                                        Image(systemName: "checkmark.circle.fill")
+                                            .foregroundColor(.white)
+                                    } else if selectedAnswer == index && !isCorrect {
+                                        // Show X for selected wrong answer
+                                        Image(systemName: "xmark.circle.fill")
+                                            .foregroundColor(.white)
+                                    }
                                 }
                             }
                             .padding()
@@ -962,26 +1018,81 @@ struct GameScreenView: View {
                     }
                 }
                 
+                
+                // FIXED SIZE FEEDBACK BOX - Show after answer selection
+                if selectedAnswer != nil {
+                    VStack(spacing: 8) {
+                        // Status line
+                        HStack {
+                            Image(systemName: isCorrect ? "checkmark.circle.fill" : "xmark.circle.fill")
+                                .foregroundColor(isCorrect ? .green : .red)
+                            
+                            Text(isCorrect ? "Correct!" : "Incorrect")
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
+                                .foregroundColor(isCorrect ? .green : .red)
+                            
+                            Spacer()
+                        }
+                        
+                        // Compact correct answer display when wrong
+                        if !isCorrect {
+                            HStack(spacing: 8) {
+                                Image(systemName: "lightbulb.fill")
+                                    .font(.caption)
+                                    .foregroundColor(.green)
+                                
+                                Text("Correct answer:")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                
+                                Text(currentPlant.correctAnswer)
+                                    .font(.caption)
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(.green)
+                                    .lineLimit(1)
+                                
+                                Spacer()
+                            }
+                        }
+                        
+                        // Plant fact in feedback box
+                        if !currentPlant.fact.isEmpty {
+                            HStack(spacing: 8) {
+                                Image(systemName: "info.circle.fill")
+                                    .font(.caption)
+                                    .foregroundColor(.blue)
+                                
+                                Text(currentPlant.fact)
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                    .lineLimit(nil)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                
+                                Spacer()
+                            }
+                        }
+                    }
+                    .frame(height: 80)
+                    .frame(maxWidth: .infinity, alignment: .topLeading)
+                    .padding(.vertical, 8)
+                    .padding(.horizontal, 12)
+                    .background(Color(.systemGray6))
+                    .cornerRadius(8)
+                }
+                
                 Spacer()
                 
                 if showResult && !gameComplete {
-                    VStack(spacing: 12) {
-                        Text(currentPlant.fact)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal)
-                        
-                        Button("Next Question") {
-                            nextQuestion()
-                        }
-                        .font(.headline)
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.green)
-                        .cornerRadius(12)
+                    Button("Next Question") {
+                        nextQuestion()
                     }
+                    .font(.headline)
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.green)
+                    .cornerRadius(12)
                 }
             }
             .padding()
@@ -1015,9 +1126,15 @@ struct GameScreenView: View {
         }
     }
     
+    private func isCorrectAnswer(_ index: Int) -> Bool {
+        let selectedOption = currentPlant.options[index].trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let correctAnswer = currentPlant.correctAnswer.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        return selectedOption == correctAnswer
+    }
+    
     private func selectAnswer(_ index: Int) {
         selectedAnswer = index
-        isCorrect = currentPlant.options[index] == currentPlant.correctAnswer
+        isCorrect = isCorrectAnswer(index)
         
         if isCorrect {
             score += 10
@@ -1025,7 +1142,6 @@ struct GameScreenView: View {
         }
         
         showResult = true
-        // No auto-advance - user must click "Next Question" button
     }
     
     private func loadPlantsAndStartGame() {
@@ -1039,15 +1155,14 @@ struct GameScreenView: View {
                     generateNewQuestion()
                     startTimer()
                 } else {
-                    // Fallback to demo data if API fails
-                    print("⚠️ API failed, using fallback data")
+                    // Show error if API fails - no fallback data
+                    print("❌ API failed - no plants available")
                     currentPlant = PlantQuestion(
-                        imageName: "🌳",
-                        correctAnswer: "Oak Tree",
-                        options: ["Oak Tree", "Maple Tree", "Pine Tree", "Birch Tree"],
-                        fact: "This is demo data - the iNaturalist API is not available."
+                        imageName: "⚠️",
+                        correctAnswer: "Error",
+                        options: ["Error loading plants", "Check internet connection", "Try again later", "API unavailable"],
+                        fact: "Unable to load plants from iNaturalist API. Please check your internet connection and try again."
                     )
-                    startTimer()
                 }
             }
         }
@@ -1097,16 +1212,18 @@ struct GameScreenView: View {
         gameComplete = false
         gameStartTime = Date()
         gameEndTime = Date()
+        isLoadingPlants = true
         
-        // Reset to first plant
+        // Reset to loading state and reload plants from API
         currentPlant = PlantQuestion(
-            imageName: "🌳",
-            correctAnswer: "Oak Tree",
-            options: ["Oak Tree", "Maple Tree", "Pine Tree", "Birch Tree"],
-            fact: "Oak trees can live for over 1,000 years and support over 500 species of wildlife."
+            imageName: "🌱",
+            correctAnswer: "Loading...",
+            options: ["Loading...", "Please wait...", "Fetching plants...", "Almost ready..."],
+            fact: "Loading real plant data from iNaturalist..."
         )
         
-        startTimer()
+        // Reload plants from API
+        loadPlantsAndStartGame()
     }
     
     private func startTimer() {
@@ -1135,16 +1252,42 @@ struct GameScreenView: View {
     }
     
     private func getAnswerTextColor(_ index: Int) -> Color {
-        if selectedAnswer == index {
-            return isCorrect ? .white : .white
+        // If an answer has been selected, adjust text colors for readability
+        if selectedAnswer != nil {
+            // White text on green background for correct answer
+            if isCorrectAnswer(index) {
+                return .white
+            }
+            // White text on red background for selected wrong answer
+            else if selectedAnswer == index && !isCorrect {
+                return .white
+            }
+            // Darker text for grayed out options
+            else {
+                return .secondary
+            }
         }
+        // Default text color before answer selection
         return .primary
     }
     
     private func getAnswerBackgroundColor(_ index: Int) -> Color {
-        if selectedAnswer == index {
-            return isCorrect ? .green : .red
+        // If an answer has been selected, show feedback
+        if selectedAnswer != nil {
+            // Highlight the correct answer in green
+            if isCorrectAnswer(index) {
+                return .green
+            }
+            // Show selected wrong answer in red
+            else if selectedAnswer == index && !isCorrect {
+                return .red
+            }
+            // Gray out other options
+            else {
+                return Color(.systemGray5)
+            }
         }
+        // Default state before answer selection
         return Color(.systemGray6)
     }
 }
