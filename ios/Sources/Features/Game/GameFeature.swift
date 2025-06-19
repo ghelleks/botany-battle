@@ -361,6 +361,8 @@ struct GameFeature {
                 }
                 
             case .questionLoaded(let plant, let options):
+                print("🎮 [GameFeature] Question loaded - Plant: \(plant.primaryCommonName), Scientific: \(plant.scientificName), ID: \(plant.id)")
+                print("🎮 [GameFeature] Options: \(options)")
                 state.currentQuestion = (plant: plant, options: options)
                 return .none
                 
@@ -664,6 +666,7 @@ struct GameFeature {
               state.canAnswer else { return .none }
         
         let correctAnswer = question.plant.primaryCommonName
+        print("🎮 [GameFeature] Submitting answer - Selected: '\(answer)', Correct: '\(correctAnswer)', Plant: \(question.plant.scientificName)")
         let answerResult = singleUserGameService.submitAnswer(
             session: &session,
             selectedAnswer: answer,

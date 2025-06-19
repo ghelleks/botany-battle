@@ -1,6 +1,65 @@
 import SwiftUI
 import GameKit
 
+// Simple iNaturalist API service
+struct SimplePlantAPIService {
+    static func fetchPlants() async -> [PlantData] {
+        guard let url = URL(string: "https://api.inaturalist.org/v1/taxa?taxon_id=47126&rank=species&per_page=20&order_by=observations_count&order=desc&photos=true&min_observations=1000") else {
+            print("❌ Invalid URL")
+            return []
+        }
+        
+        do {
+            print("🌐 Fetching plants from iNaturalist API...")
+            let (data, _) = try await URLSession.shared.data(from: url)
+            let response = try JSONDecoder().decode(iNaturalistResponse.self, from: data)
+            
+            let plants = response.results.compactMap { taxon -> PlantData? in
+                guard let photo = taxon.default_photo?.medium_url,
+                      let name = taxon.preferred_common_name ?? taxon.name.split(separator: " ").last.map(String.init) else {
+                    return nil
+                }
+                
+                return PlantData(
+                    name: name,
+                    scientificName: taxon.name,
+                    imageURL: photo,
+                    description: "A plant with \(taxon.observations_count) observations on iNaturalist."
+                )
+            }
+            
+            print("✅ Successfully fetched \(plants.count) real plants from iNaturalist!")
+            return plants
+        } catch {
+            print("❌ Error fetching plants: \(error)")
+            return []
+        }
+    }
+}
+
+// Data structures for iNaturalist API
+struct iNaturalistResponse: Codable {
+    let results: [Taxon]
+}
+
+struct Taxon: Codable {
+    let name: String
+    let preferred_common_name: String?
+    let observations_count: Int
+    let default_photo: Photo?
+}
+
+struct Photo: Codable {
+    let medium_url: String
+}
+
+struct PlantData {
+    let name: String
+    let scientificName: String
+    let imageURL: String
+    let description: String
+}
+
 // Simple demo version without external dependencies
 struct SimpleContentView: View {
     @State private var isAuthenticated = false
@@ -783,13 +842,15 @@ struct GameScreenView: View {
     @State private var correctAnswers = 0
     @State private var gameStartTime = Date()
     @State private var gameEndTime = Date()
+    @State private var isLoadingPlants = true
+    @State private var availablePlants: [PlantData] = []
     
-    // Sample plant question with actual plant images
+    // Sample plant question - will be replaced with real data
     @State private var currentPlant = PlantQuestion(
-        imageName: "🌳",
-        correctAnswer: "Oak Tree",
-        options: ["Oak Tree", "Maple Tree", "Pine Tree", "Birch Tree"],
-        fact: "Oak trees can live for over 1,000 years and support over 500 species of wildlife."
+        imageName: "🌱",
+        correctAnswer: "Loading...",
+        options: ["Loading...", "Please wait...", "Fetching plants...", "Almost ready..."],
+        fact: "Loading real plant data from iNaturalist..."
     )
     
     var body: some View {
@@ -831,15 +892,44 @@ struct GameScreenView: View {
                 
                 // Plant Image
                 VStack(spacing: 16) {
-                    Text(currentPlant.imageName)
-                        .font(.system(size: 120))
+                    if isLoadingPlants {
+                        ProgressView("Loading plants...")
+                            .frame(height: 150)
+                            .frame(maxWidth: .infinity)
+                            .background(Color(.systemGray6))
+                            .cornerRadius(12)
+                    } else if currentPlant.imageName.hasPrefix("http") {
+                        // Real plant image from iNaturalist
+                        AsyncImage(url: URL(string: currentPlant.imageName)) { image in
+                            image
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                        } placeholder: {
+                            ProgressView()
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        }
                         .frame(height: 150)
+                        .frame(maxWidth: .infinity)
                         .background(Color(.systemGray6))
                         .cornerRadius(12)
+                        .clipped()
                         .overlay(
                             RoundedRectangle(cornerRadius: 12)
                                 .stroke(Color.green, lineWidth: 2)
                         )
+                    } else {
+                        // Fallback emoji display
+                        Text(currentPlant.imageName)
+                            .font(.system(size: 120))
+                            .frame(height: 150)
+                            .frame(maxWidth: .infinity)
+                            .background(Color(.systemGray6))
+                            .cornerRadius(12)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Color.green, lineWidth: 2)
+                            )
+                    }
                     
                     Text("What plant is this?")
                         .font(.title2)
@@ -921,7 +1011,7 @@ struct GameScreenView: View {
         }
         .onAppear {
             gameStartTime = Date()
-            startTimer()
+            loadPlantsAndStartGame()
         }
     }
     
@@ -938,6 +1028,49 @@ struct GameScreenView: View {
         // No auto-advance - user must click "Next Question" button
     }
     
+    private func loadPlantsAndStartGame() {
+        Task {
+            let plants = await SimplePlantAPIService.fetchPlants()
+            await MainActor.run {
+                self.availablePlants = plants
+                self.isLoadingPlants = false
+                
+                if !plants.isEmpty {
+                    generateNewQuestion()
+                    startTimer()
+                } else {
+                    // Fallback to demo data if API fails
+                    print("⚠️ API failed, using fallback data")
+                    currentPlant = PlantQuestion(
+                        imageName: "🌳",
+                        correctAnswer: "Oak Tree",
+                        options: ["Oak Tree", "Maple Tree", "Pine Tree", "Birch Tree"],
+                        fact: "This is demo data - the iNaturalist API is not available."
+                    )
+                    startTimer()
+                }
+            }
+        }
+    }
+    
+    private func generateNewQuestion() {
+        guard availablePlants.count >= 4 else { return }
+        
+        // Pick a random correct plant
+        let correctPlant = availablePlants.randomElement()!
+        
+        // Pick 3 random wrong answers
+        var wrongOptions = availablePlants.filter { $0.name != correctPlant.name }.shuffled().prefix(3).map { $0.name }
+        wrongOptions.append(correctPlant.name)
+        
+        currentPlant = PlantQuestion(
+            imageName: correctPlant.imageURL,
+            correctAnswer: correctPlant.name,
+            options: Array(wrongOptions.shuffled()),
+            fact: correctPlant.description
+        )
+    }
+    
     private func nextQuestion() {
         if currentQuestion >= 5 {
             // Game over - show results
@@ -951,25 +1084,7 @@ struct GameScreenView: View {
         showResult = false
         timeRemaining = getTimeForGameMode()
         
-        // Generate new question with diverse plant emojis and facts
-        let plants = [
-            ("🌳", "Oak Tree", ["Oak Tree", "Maple Tree", "Pine Tree", "Birch Tree"], "Oak trees can live for over 1,000 years and support over 500 species of wildlife."),
-            ("🌲", "Pine Tree", ["Pine Tree", "Oak Tree", "Willow Tree", "Cedar Tree"], "Pine trees are evergreen conifers that can survive in harsh winter conditions."),
-            ("🍁", "Maple Tree", ["Maple Tree", "Elm Tree", "Ash Tree", "Beech Tree"], "Maple trees produce the sweet sap used to make maple syrup."),
-            ("🌴", "Palm Tree", ["Palm Tree", "Bamboo", "Fern", "Cactus"], "Palm trees are tropical plants that can grow up to 200 feet tall."),
-            ("🌵", "Cactus", ["Cactus", "Succulent", "Aloe", "Agave"], "Cacti store water in their thick stems and can survive without rain for years."),
-            ("🌿", "Fern", ["Fern", "Moss", "Lichen", "Ivy"], "Ferns reproduce through spores rather than seeds and love humid environments."),
-            ("🌾", "Wheat", ["Wheat", "Rice", "Corn", "Barley"], "Wheat is one of the world's most important cereal grains and food sources."),
-            ("🌻", "Sunflower", ["Sunflower", "Daisy", "Marigold", "Zinnia"], "Sunflowers can grow up to 12 feet tall and always face the sun.")
-        ]
-        let randomPlant = plants.randomElement()!
-        currentPlant = PlantQuestion(
-            imageName: randomPlant.0,
-            correctAnswer: randomPlant.1,
-            options: randomPlant.2.shuffled(),
-            fact: randomPlant.3
-        )
-        
+        generateNewQuestion()
         startTimer()
     }
     

@@ -5,6 +5,11 @@ struct PlantImageView: View {
     let mode: GameMode?
     @State private var imageScale: CGFloat = 1.0
     @State private var isLoading = true
+    @State private var hasError = false
+    @State private var retryCount = 0
+    @State private var isOffline = false
+    
+    private let maxRetries = 3
     
     init(plant: Plant, mode: GameMode? = nil) {
         self.plant = plant
@@ -31,11 +36,11 @@ struct PlantImageView: View {
                             .stroke(Color(.systemGray4), lineWidth: 1)
                     )
                 
-                // Plant Image
-                AsyncImage(url: URL(string: plant.imageURL)) { phase in
+                // Plant Image with enhanced error handling
+                AsyncImage(url: URL(string: currentImageURL)) { phase in
                     switch phase {
                     case .empty:
-                        LoadingImageView()
+                        LoadingImageView(isRetrying: retryCount > 0)
                     case .success(let image):
                         image
                             .resizable()
@@ -44,14 +49,26 @@ struct PlantImageView: View {
                             .clipped()
                             .onAppear {
                                 isLoading = false
+                                hasError = false
                                 withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
                                     imageScale = 1.0
                                 }
                             }
-                    case .failure(_):
-                        ErrorImageView()
+                    case .failure(let error):
+                        ErrorImageView(
+                            error: error,
+                            retryCount: retryCount,
+                            maxRetries: maxRetries,
+                            onRetry: handleRetry,
+                            isOffline: isOffline
+                        )
+                        .onAppear {
+                            isLoading = false
+                            hasError = true
+                            checkNetworkStatus()
+                        }
                     @unknown default:
-                        LoadingImageView()
+                        LoadingImageView(isRetrying: false)
                     }
                 }
                 .cornerRadius(12)
@@ -71,17 +88,57 @@ struct PlantImageView: View {
             imageScale = 0.9
         }
     }
+    
+    // MARK: - Helper Methods and Computed Properties
+    
+    private var currentImageURL: String {
+        // Try thumbnail first if available and we're on limited connection
+        if isOffline || (retryCount > 1 && plant.thumbnailURL != nil) {
+            return plant.thumbnailURL ?? plant.imageURL
+        }
+        return plant.imageURL
+    }
+    
+    private func handleRetry() {
+        guard retryCount < maxRetries else { return }
+        retryCount += 1
+        hasError = false
+        isLoading = true
+        
+        // Add a small delay before retrying
+        DispatchQueue.main.asyncAfter(deadline: .now() + Double(retryCount) * 0.5) {
+            // The AsyncImage will automatically retry when the URL changes or view updates
+        }
+    }
+    
+    private func checkNetworkStatus() {
+        // Simple network check - in a real app you might use Network framework
+        let url = URL(string: "https://www.apple.com")!
+        var request = URLRequest(url: url)
+        request.timeoutInterval = 3.0
+        
+        URLSession.shared.dataTask(with: request) { _, _, error in
+            DispatchQueue.main.async {
+                isOffline = (error != nil)
+            }
+        }.resume()
+    }
 }
 
 // MARK: - Loading Image View
 struct LoadingImageView: View {
+    let isRetrying: Bool
     @State private var rotationAngle: Double = 0
+    
+    init(isRetrying: Bool = false) {
+        self.isRetrying = isRetrying
+    }
     
     var body: some View {
         VStack(spacing: 16) {
-            Image(systemName: "leaf.fill")
+            Image(systemName: isRetrying ? "arrow.clockwise" : "leaf.fill")
                 .font(.system(size: 40))
-                .foregroundColor(.botanicalGreen)
+                .foregroundColor(isRetrying ? .orange : .botanicalGreen)
                 .rotationEffect(.degrees(rotationAngle))
                 .onAppear {
                     withAnimation(.linear(duration: 2).repeatForever(autoreverses: false)) {
@@ -89,27 +146,100 @@ struct LoadingImageView: View {
                     }
                 }
             
-            Text("Loading plant...")
+            Text(isRetrying ? "Retrying..." : "Loading plant...")
                 .botanicalStyle(BotanicalTextStyle.body)
                 .foregroundColor(.secondary)
+            
+            if isRetrying {
+                Text("Attempting to load image...")
+                    .botanicalStyle(BotanicalTextStyle.caption)
+                    .foregroundColor(.secondary)
+            }
         }
     }
 }
 
 // MARK: - Error Image View
 struct ErrorImageView: View {
+    let error: Error
+    let retryCount: Int
+    let maxRetries: Int
+    let onRetry: () -> Void
+    let isOffline: Bool
+    
     var body: some View {
         VStack(spacing: 16) {
-            Image(systemName: "exclamationmark.triangle.fill")
+            Image(systemName: iconName)
                 .font(.system(size: 40))
-                .foregroundColor(.orange)
+                .foregroundColor(iconColor)
             
-            Text("Unable to load image")
+            Text(errorMessage)
                 .botanicalStyle(BotanicalTextStyle.body)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
+            
+            if retryCount < maxRetries {
+                Button(action: onRetry) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "arrow.clockwise")
+                        Text("Retry")
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .background(Color.botanicalGreen)
+                    .foregroundColor(.white)
+                    .cornerRadius(8)
+                }
+                .botanicalStyle(BotanicalTextStyle.caption)
+            }
+            
+            if isOffline {
+                HStack(spacing: 4) {
+                    Image(systemName: "wifi.slash")
+                        .font(.caption)
+                    Text("Offline")
+                        .botanicalStyle(BotanicalTextStyle.caption)
+                }
+                .foregroundColor(.orange)
+            }
+            
+            if retryCount > 0 {
+                Text("Retry \(retryCount)/\(maxRetries)")
+                    .botanicalStyle(BotanicalTextStyle.caption)
+                    .foregroundColor(.secondary)
+            }
         }
         .padding()
+    }
+    
+    private var iconName: String {
+        if isOffline {
+            return "wifi.slash"
+        } else if retryCount >= maxRetries {
+            return "xmark.circle.fill"
+        } else {
+            return "exclamationmark.triangle.fill"
+        }
+    }
+    
+    private var iconColor: Color {
+        if isOffline {
+            return .orange
+        } else if retryCount >= maxRetries {
+            return .red
+        } else {
+            return .orange
+        }
+    }
+    
+    private var errorMessage: String {
+        if isOffline {
+            return "No internet connection"
+        } else if retryCount >= maxRetries {
+            return "Failed to load image after \(maxRetries) attempts"
+        } else {
+            return "Unable to load plant image"
+        }
     }
 }
 
@@ -174,18 +304,14 @@ struct PlantInfoOverlay: View {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
                     if showDetails {
-                        if let scientificName = plant.scientificName {
-                            Text(scientificName)
-                                .botanicalStyle(BotanicalTextStyle.caption)
-                                .foregroundColor(.white.opacity(0.9))
-                                .italic()
-                        }
+                        Text(plant.scientificName)
+                            .botanicalStyle(BotanicalTextStyle.caption)
+                            .foregroundColor(.white.opacity(0.9))
+                            .italic()
                         
-                        if let family = plant.family {
-                            Text("Family: \(family)")
-                                .botanicalStyle(BotanicalTextStyle.caption)
-                                .foregroundColor(.white.opacity(0.8))
-                        }
+                        Text("Family: \(plant.family)")
+                            .botanicalStyle(BotanicalTextStyle.caption)
+                            .foregroundColor(.white.opacity(0.8))
                     }
                 }
                 
@@ -281,15 +407,15 @@ struct HintOverlayView: View {
     private var hintText: String {
         switch hintLevel {
         case 1:
-            return plant.family ?? "This plant belongs to a specific botanical family."
+            return "Family: \(plant.family)"
         case 2:
-            if let scientificName = plant.scientificName {
-                let parts = scientificName.split(separator: " ")
-                return "Scientific name starts with: \(parts.first ?? "")"
-            }
-            return "This plant has a unique scientific classification."
+            let parts = plant.scientificName.split(separator: " ")
+            return "Scientific name starts with: \(parts.first ?? "Unknown")"
         case 3:
-            return plant.nativeRegion ?? "This plant is native to a specific geographic region."
+            if let region = plant.regions.first {
+                return "Native to: \(region)"
+            }
+            return "This plant is native to specific geographic regions."
         default:
             return "Look closely at the plant's distinctive features."
         }
@@ -301,12 +427,28 @@ struct HintOverlayView: View {
         PlantImageView(
             plant: Plant(
                 id: "1",
-                primaryCommonName: "Rose",
                 scientificName: "Rosa rubiginosa",
+                commonNames: ["Rose", "Sweet Briar"],
                 family: "Rosaceae",
+                genus: "Rosa",
+                species: "rubiginosa",
                 imageURL: "https://example.com/rose.jpg",
-                interestingFact: "Roses have been cultivated for over 5,000 years.",
-                nativeRegion: "Asia"
+                thumbnailURL: "https://example.com/rose-thumb.jpg",
+                description: "Roses have been cultivated for over 5,000 years.",
+                difficulty: 25,
+                rarity: .common,
+                habitat: ["Gardens"],
+                regions: ["Asia"],
+                characteristics: Plant.Characteristics(
+                    leafType: nil,
+                    flowerColor: ["Red"],
+                    bloomTime: ["Summer"],
+                    height: nil,
+                    sunRequirement: nil,
+                    waterRequirement: nil,
+                    soilType: []
+                ),
+                iNaturalistId: nil
             ),
             mode: .beatTheClock
         )
@@ -315,12 +457,28 @@ struct HintOverlayView: View {
         EnhancedPlantImageView(
             plant: Plant(
                 id: "2",
-                primaryCommonName: "Sunflower",
                 scientificName: "Helianthus annuus",
+                commonNames: ["Sunflower", "Common Sunflower"],
                 family: "Asteraceae",
+                genus: "Helianthus",
+                species: "annuus",
                 imageURL: "https://example.com/sunflower.jpg",
-                interestingFact: "Sunflowers can grow up to 12 feet tall.",
-                nativeRegion: "North America"
+                thumbnailURL: "https://example.com/sunflower-thumb.jpg",
+                description: "Sunflowers can grow up to 12 feet tall.",
+                difficulty: 15,
+                rarity: .common,
+                habitat: ["Fields"],
+                regions: ["North America"],
+                characteristics: Plant.Characteristics(
+                    leafType: nil,
+                    flowerColor: ["Yellow"],
+                    bloomTime: ["Summer"],
+                    height: nil,
+                    sunRequirement: nil,
+                    waterRequirement: nil,
+                    soilType: []
+                ),
+                iNaturalistId: nil
             ),
             mode: .speedrun,
             showHints: true,
