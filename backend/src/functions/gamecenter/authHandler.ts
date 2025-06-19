@@ -75,8 +75,17 @@ export const handler = async (
       };
     }
 
-    // Decode the Game Center token
-    const tokenData = decodeGameCenterToken(token);
+    // Decode the Game Center token with proper error handling
+    let tokenData: GameCenterTokenData;
+    try {
+      tokenData = decodeGameCenterToken(token);
+    } catch (error) {
+      return {
+        statusCode: 401,
+        headers,
+        body: JSON.stringify({ error: 'Invalid Game Center token' }),
+      };
+    }
     
     // Validate the token (in production, you would verify the signature with Apple)
     const isValid = await validateGameCenterToken(tokenData);
@@ -89,8 +98,21 @@ export const handler = async (
       };
     }
 
-    // Get or create user
-    const user = await getOrCreateUser(tokenData.playerId);
+    // Get or create user with proper error handling
+    let user: User;
+    try {
+      user = await getOrCreateUser(tokenData.playerId);
+    } catch (error) {
+      console.error('Database error in getOrCreateUser:', error);
+      return {
+        statusCode: 500,
+        headers,
+        body: JSON.stringify({ 
+          error: 'Internal server error',
+          message: error instanceof Error ? error.message : 'Unknown error'
+        }),
+      };
+    }
 
     return {
       statusCode: 200,
@@ -128,13 +150,20 @@ async function validateGameCenterToken(tokenData: GameCenterTokenData): Promise<
     return false;
   }
 
-  // Check if token is not too old (5 minutes)
+  // Check if token is not too old (5 minutes) and not from the future
   const tokenTime = parseInt(tokenData.timestamp);
   const currentTime = Math.floor(Date.now() / 1000);
   const timeDiff = currentTime - tokenTime;
   
+  // Reject tokens that are too old (more than 5 minutes)
   if (timeDiff > 300) { // 5 minutes
     console.warn('Token is too old:', timeDiff);
+    return false;
+  }
+  
+  // Reject tokens from the future (more than 1 minute ahead to account for clock skew)
+  if (timeDiff < -60) { // 1 minute in the future
+    console.warn('Token is from the future:', timeDiff);
     return false;
   }
 
@@ -197,6 +226,6 @@ async function getOrCreateUser(playerId: string): Promise<User> {
     return newUser;
   } catch (error) {
     console.error('Error getting/creating user:', error);
-    throw new Error('Failed to get or create user');
+    throw error;
   }
 }

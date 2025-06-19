@@ -1,29 +1,27 @@
-import { 
-  findELOBasedOpponent,
-  addToMatchmakingQueue,
-  removeFromMatchmakingQueue,
-  finalizeGame,
-  getUserStats 
-} from '../handler';
+// Create mock functions first
+const mockRedis = {
+  hgetall: jest.fn(),
+  hset: jest.fn(),
+  hdel: jest.fn(),
+  expire: jest.fn(),
+  get: jest.fn(),
+  setex: jest.fn(),
+  del: jest.fn()
+};
 
-// Mock Redis
+// Create DynamoDB mock function
+const mockSend = jest.fn();
+
+// Mock Redis constructor
 jest.mock('ioredis', () => {
-  return jest.fn().mockImplementation(() => ({
-    hgetall: jest.fn(),
-    hset: jest.fn(),
-    hdel: jest.fn(),
-    expire: jest.fn(),
-    get: jest.fn(),
-    setex: jest.fn(),
-    del: jest.fn()
-  }));
+  return jest.fn().mockImplementation(() => mockRedis);
 });
 
 // Mock DynamoDB
 jest.mock('@aws-sdk/lib-dynamodb', () => ({
   DynamoDBDocumentClient: {
     from: jest.fn(() => ({
-      send: jest.fn()
+      send: mockSend
     }))
   },
   GetCommand: jest.fn()
@@ -32,7 +30,14 @@ jest.mock('@aws-sdk/lib-dynamodb', () => ({
 // Mock ELO functions
 jest.mock('../eloRanking', () => ({
   updateELORatings: jest.fn(),
-  getMatchmakingRange: jest.fn(() => ({ min: 950, max: 1050 }))
+  getMatchmakingRange: jest.fn((rating: number) => {
+    // Return a range that makes sense for the given rating
+    const range = 150; // Base range
+    return { 
+      min: Math.max(100, rating - range), 
+      max: rating + range 
+    };
+  })
 }));
 
 // Mock user service
@@ -40,16 +45,20 @@ jest.mock('../../user/handler', () => ({
   updateUserELO: jest.fn()
 }));
 
+// Import handler after mocks are set up
+import { 
+  findELOBasedOpponent,
+  addToMatchmakingQueue,
+  removeFromMatchmakingQueue,
+  finalizeGame,
+  getUserStats 
+} from '../handler';
+
 describe('Game Logic', () => {
-  let mockRedis: any;
   let mockDynamoDb: any;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    
-    // Setup Redis mock
-    const Redis = require('ioredis');
-    mockRedis = new Redis();
     
     // Setup DynamoDB mock
     const { DynamoDBDocumentClient } = require('@aws-sdk/lib-dynamodb');
@@ -179,7 +188,7 @@ describe('Game Logic', () => {
           totalGamesPlayed: 42
         };
         
-        mockDynamoDb.send.mockResolvedValue({
+        mockSend.mockResolvedValue({
           Item: mockUserStats
         });
         
@@ -192,7 +201,7 @@ describe('Game Logic', () => {
       });
 
       it('should return default stats for new user', async () => {
-        mockDynamoDb.send.mockResolvedValue({});
+        mockSend.mockResolvedValue({});
         
         const stats = await getUserStats('newuser');
         
@@ -203,7 +212,7 @@ describe('Game Logic', () => {
       });
 
       it('should handle database errors gracefully', async () => {
-        mockDynamoDb.send.mockRejectedValue(new Error('Database error'));
+        mockSend.mockRejectedValue(new Error('Database error'));
         
         const stats = await getUserStats('user123');
         
@@ -256,7 +265,7 @@ describe('Game Logic', () => {
         });
 
         // Mock getUserStats
-        mockDynamoDb.send.mockResolvedValue({
+        mockSend.mockResolvedValue({
           Item: { totalGamesPlayed: 25 }
         });
       });
@@ -327,7 +336,7 @@ describe('Game Logic', () => {
       });
 
       it('should update user ELO ratings in database', async () => {
-        const { updateUserELO } = require('../user/handler');
+        const { updateUserELO } = require('../../user/handler');
         
         await finalizeGame(mockGameState);
         
@@ -360,11 +369,11 @@ describe('Game Logic', () => {
 
   describe('Game Flow Integration', () => {
     it('should handle complete game flow from matchmaking to completion', async () => {
-      // 1. Add players to queue
+      // 1. Add players to queue (these will be mocked calls)
       await addToMatchmakingQueue('player1', 1200);
       await addToMatchmakingQueue('player2', 1180);
       
-      // 2. Find match
+      // 2. Set up mock for finding match (after beforeEach clears mocks)
       mockRedis.hgetall.mockResolvedValue({
         'player2': JSON.stringify({
           eloRating: 1180,
@@ -374,6 +383,8 @@ describe('Game Logic', () => {
       
       const opponent = await findELOBasedOpponent('player1', 1200);
       expect(opponent).toBeTruthy();
+      expect(opponent?.userId).toBe('player2');
+      expect(opponent?.eloRating).toBe(1180);
       
       // 3. Remove matched players from queue
       await removeFromMatchmakingQueue('player2');
@@ -401,6 +412,11 @@ describe('Game Logic', () => {
         status: 'completed'
       };
       
+      // Mock getUserStats calls for finalizeGame
+      mockSend.mockResolvedValue({
+        Item: { totalGamesPlayed: 25 }
+      });
+      
       await finalizeGame(gameState);
       
       expect(gameState.winner).toBe('player1');
@@ -408,7 +424,7 @@ describe('Game Logic', () => {
     });
 
     it('should handle errors gracefully in game finalization', async () => {
-      const { updateUserELO } = require('../user/handler');
+      const { updateUserELO } = require('../../user/handler');
       updateUserELO.mockRejectedValue(new Error('Database error'));
       
       const gameState = {

@@ -598,8 +598,42 @@ function generateAchievements(stats: UserStats) {
   return achievements;
 }
 
+// Main Lambda handler
+export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
+  const { httpMethod, path } = event;
+  
+  try {
+    switch (true) {
+      case httpMethod === 'GET' && path.includes('/profile'):
+        return await getUserProfile(event);
+      case httpMethod === 'PUT' && path.includes('/profile'):
+        return await updateUserProfile(event);
+      case httpMethod === 'GET' && path.includes('/leaderboard'):
+        return await getLeaderboard(event);
+      case httpMethod === 'GET' && path.includes('/stats'):
+        return await getUserStats(event);
+      default:
+        return {
+          statusCode: 404,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ error: 'Route not found' })
+        };
+    }
+  } catch (error) {
+    console.error('User handler error:', error);
+    return {
+      statusCode: 500,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ error: 'Internal server error' })
+    };
+  }
+};
+
 // Lambda handler exports
 export { getUserProfile as profile };
 export { updateUserProfile as update };
 export { getLeaderboard as leaderboard };
 export { getUserStats as stats };
+
+// Export function needed by game handler
+export { updateUserELO };

@@ -727,3 +727,12 @@ async function sendWebSocketMessage(userId: string, message: any): Promise<void>
     }
   }
 }
+
+// Export functions for testing
+export { 
+  getUserStats,
+  findELOBasedOpponent,
+  addToMatchmakingQueue,
+  removeFromMatchmakingQueue,
+  finalizeGame
+};

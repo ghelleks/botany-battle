@@ -1,15 +1,16 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
-import { handler } from '../authHandler';
 
-// Mock AWS SDK
-jest.mock('@aws-sdk/client-dynamodb');
-jest.mock('@aws-sdk/lib-dynamodb');
-
+// Mock AWS SDK before importing the handler
+const mockSend = jest.fn();
 const mockDocClient = {
-  send: jest.fn()
+  send: mockSend
 };
 
-jest.doMock('@aws-sdk/lib-dynamodb', () => ({
+jest.mock('@aws-sdk/client-dynamodb', () => ({
+  DynamoDBClient: jest.fn(() => ({}))
+}));
+
+jest.mock('@aws-sdk/lib-dynamodb', () => ({
   DynamoDBDocumentClient: {
     from: jest.fn(() => mockDocClient)
   },
@@ -17,9 +18,13 @@ jest.doMock('@aws-sdk/lib-dynamodb', () => ({
   PutCommand: jest.fn()
 }));
 
+// Import handler after mocking
+import { handler } from '../authHandler';
+
 describe('Game Center Authentication Handler', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockSend.mockClear();
     process.env.DYNAMODB_TABLE = 'test-table';
     process.env.AWS_REGION = 'us-west-2';
   });
@@ -217,7 +222,7 @@ describe('Game Center Authentication Handler', () => {
         }
       };
 
-      mockDocClient.send.mockResolvedValueOnce({ Item: existingUser });
+      mockSend.mockResolvedValueOnce({ Item: existingUser });
 
       const event: APIGatewayProxyEvent = {
         httpMethod: 'POST',
@@ -253,9 +258,9 @@ describe('Game Center Authentication Handler', () => {
       const validToken = Buffer.from(JSON.stringify(validTokenData)).toString('base64');
 
       // Mock GetCommand returns no item (user doesn't exist)
-      mockDocClient.send.mockResolvedValueOnce({ Item: null });
+      mockSend.mockResolvedValueOnce({ Item: null });
       // Mock PutCommand succeeds
-      mockDocClient.send.mockResolvedValueOnce({});
+      mockSend.mockResolvedValueOnce({});
 
       const event: APIGatewayProxyEvent = {
         httpMethod: 'POST',
@@ -283,7 +288,7 @@ describe('Game Center Authentication Handler', () => {
       expect(responseBody.user.currency.coins).toBe(100);
 
       // Verify PutCommand was called to create the user
-      expect(mockDocClient.send).toHaveBeenCalledTimes(2); // Get + Put
+      expect(mockSend).toHaveBeenCalledTimes(2); // Get + Put
     });
 
     it('should handle database errors gracefully', async () => {
@@ -296,7 +301,7 @@ describe('Game Center Authentication Handler', () => {
       };
       const validToken = Buffer.from(JSON.stringify(validTokenData)).toString('base64');
 
-      mockDocClient.send.mockRejectedValueOnce(new Error('Database connection failed'));
+      mockSend.mockRejectedValueOnce(new Error('Database connection failed'));
 
       const event: APIGatewayProxyEvent = {
         httpMethod: 'POST',
@@ -419,8 +424,8 @@ describe('Game Center Authentication Handler', () => {
       };
       const validToken = Buffer.from(JSON.stringify(validTokenData)).toString('base64');
 
-      mockDocClient.send.mockResolvedValue({ Item: null }); // User doesn't exist
-      mockDocClient.send.mockResolvedValue({}); // Put succeeds
+      mockSend.mockResolvedValue({ Item: null }); // User doesn't exist
+      mockSend.mockResolvedValue({}); // Put succeeds
 
       const event: APIGatewayProxyEvent = {
         httpMethod: 'POST',

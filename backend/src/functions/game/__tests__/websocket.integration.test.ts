@@ -198,6 +198,9 @@ describe('WebSocket Functionality Integration Tests', () => {
     it('should handle connection timeouts gracefully', async () => {
       const timeoutHandler = jest.fn();
       
+      // Set up fake timers before scheduling timeout
+      jest.useFakeTimers();
+      
       // Simulate connection timeout
       setTimeout(() => {
         mockWebSocket.readyState = WebSocket.CLOSED;
@@ -205,7 +208,6 @@ describe('WebSocket Functionality Integration Tests', () => {
       }, 1000);
 
       // Fast-forward time
-      jest.useFakeTimers();
       jest.advanceTimersByTime(1000);
       
       expect(timeoutHandler).toHaveBeenCalled();
