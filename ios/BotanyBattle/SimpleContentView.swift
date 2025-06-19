@@ -1309,6 +1309,9 @@ struct GameResultsView: View {
                         .font(.title3)
                         .fontWeight(.medium)
                         .multilineTextAlignment(.center)
+                        .lineLimit(nil) // Allow unlimited lines to prevent truncation
+                        .fixedSize(horizontal: false, vertical: true) // Enable vertical expansion
+                        .padding(.horizontal, 16) // Ensure margins from screen edges
                         .foregroundColor(performanceColor)
                 }
                 

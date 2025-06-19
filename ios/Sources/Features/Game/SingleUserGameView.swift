@@ -342,17 +342,63 @@ struct AnswerFeedbackView: View {
             }
             
             if !isCorrect {
-                Text("The correct answer is: \(correctAnswer)")
-                    .botanicalStyle(BotanicalTextStyle.body)
-                    .foregroundColor(.secondary)
+                VStack(spacing: 8) {
+                    HStack {
+                        Image(systemName: "lightbulb.fill")
+                            .foregroundColor(.botanicalGreen)
+                        
+                        Text("The correct answer is:")
+                            .botanicalStyle(BotanicalTextStyle.body)
+                            .foregroundColor(.secondary)
+                        
+                        Spacer()
+                    }
+                    
+                    Text(correctAnswer)
+                        .botanicalStyle(BotanicalTextStyle.title3)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.botanicalGreen)
+                        .multilineTextAlignment(.center)
+                        .lineLimit(nil) // Allow text wrapping for long plant names
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .frame(maxWidth: .infinity)
+                        .background(
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(Color.botanicalGreen.opacity(0.1))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .stroke(Color.botanicalGreen.opacity(0.3), lineWidth: 1.5)
+                                )
+                        )
+                }
             }
             
             if let description = plant.description {
-                Text(description)
-                    .botanicalStyle(BotanicalTextStyle.caption)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal)
+                VStack(spacing: 8) {
+                    HStack {
+                        Image(systemName: "info.circle.fill")
+                            .foregroundColor(.blue)
+                        
+                        Text("Plant Info:")
+                            .botanicalStyle(BotanicalTextStyle.subheadline)
+                            .fontWeight(.medium)
+                            .foregroundColor(.blue)
+                        
+                        Spacer()
+                    }
+                    
+                    Text(description)
+                        .botanicalStyle(BotanicalTextStyle.caption)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.leading)
+                        .lineLimit(nil) // Allow unlimited lines for descriptions
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 8)
+                }
+                .padding(.top, 8)
             }
         }
         .padding()

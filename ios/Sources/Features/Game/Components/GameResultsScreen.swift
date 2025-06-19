@@ -955,6 +955,8 @@ struct AchievementBadgeView: View {
                     .botanicalStyle(BotanicalTextStyle.caption)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
+                    .lineLimit(nil) // Allow unlimited lines for achievement descriptions
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
         .padding(12)

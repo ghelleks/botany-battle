@@ -431,19 +431,40 @@ struct AnswerFeedbackSection: View {
                 }
             }
             
-            // Show correct answer if incorrect
+            // Show correct answer if incorrect - Enhanced display
             if !isCorrect {
-                HStack {
-                    Text("Correct answer:")
-                        .botanicalStyle(BotanicalTextStyle.body)
-                        .foregroundColor(.secondary)
+                VStack(spacing: 8) {
+                    // Learning moment header
+                    HStack {
+                        Image(systemName: "lightbulb.fill")
+                            .foregroundColor(.botanicalGreen)
+                        
+                        Text("Learn the correct answer:")
+                            .botanicalStyle(BotanicalTextStyle.body)
+                            .foregroundColor(.secondary)
+                        
+                        Spacer()
+                    }
                     
+                    // Highlighted correct answer box
                     Text(correctAnswer)
-                        .botanicalStyle(BotanicalTextStyle.body)
+                        .botanicalStyle(BotanicalTextStyle.title3)
                         .fontWeight(.semibold)
-                        .foregroundColor(.green)
-                    
-                    Spacer()
+                        .foregroundColor(.botanicalGreen)
+                        .multilineTextAlignment(.center)
+                        .lineLimit(nil) // Allow text wrapping for long plant names
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .frame(maxWidth: .infinity)
+                        .background(
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(Color.botanicalGreen.opacity(0.1))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .stroke(Color.botanicalGreen.opacity(0.3), lineWidth: 1.5)
+                                )
+                        )
                 }
             }
         }
