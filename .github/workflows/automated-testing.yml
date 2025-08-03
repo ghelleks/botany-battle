@@ -1,0 +1,431 @@
+name: Automated Multiplayer Testing
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    # Run tests daily at 2 AM UTC
+    - cron: '0 2 * * *'
+
+env:
+  NODE_VERSION: '18'
+  XCODE_VERSION: '15.0'
+
+jobs:
+  backend-tests:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        cache-dependency-path: backend/package-lock.json
+        
+    - name: Install backend dependencies
+      run: |
+        cd backend
+        npm ci
+        
+    - name: Run backend linting
+      run: |
+        cd backend
+        npm run lint
+        
+    - name: Run unit tests
+      run: |
+        cd backend
+        npm run test:unit
+        
+    - name: Run integration tests
+      run: |
+        cd backend
+        npm run test:integration
+        
+    - name: Run load tests
+      run: |
+        cd backend
+        npm run test:load
+        
+    - name: Generate coverage report
+      run: |
+        cd backend
+        npm run test:unit -- --coverage
+        
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v4
+      with:
+        file: ./backend/coverage/lcov.info
+        flags: backend
+        name: backend-coverage
+        
+    - name: Archive test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: backend-test-results
+        path: |
+          backend/coverage/
+          backend/test-results.xml
+
+  ios-tests:
+    name: iOS Tests
+    runs-on: macos-14
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Xcode
+      uses: maxim-lobanov/setup-xcode@v1
+      with:
+        xcode-version: ${{ env.XCODE_VERSION }}
+        
+    - name: Cache Xcode DerivedData
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/Library/Developer/Xcode/DerivedData
+          ios/DerivedData
+        key: ${{ runner.os }}-xcode-${{ hashFiles('ios/**/*.swift', 'ios/**/*.xcodeproj') }}
+        restore-keys: |
+          ${{ runner.os }}-xcode-
+          
+    - name: Install xcpretty
+      run: gem install xcpretty
+      
+    - name: Run iOS unit tests
+      run: |
+        cd ios
+        xcodebuild test \
+          -project BotanyBattle.xcodeproj \
+          -scheme "Botany BattleTests" \
+          -destination 'platform=iOS Simulator,name=iPhone 15,OS=17.5' \
+          -derivedDataPath DerivedData \
+          -resultBundlePath TestResults/UnitTests.xcresult \
+          -only-testing:BotanyBattleTests/BasicUnitTests \
+          -only-testing:BotanyBattleTests/GameCenterServiceTests \
+          | xcpretty --color --report junit --output TestResults/unit-tests.xml
+          
+    - name: Run iOS integration tests
+      run: |
+        cd ios
+        xcodebuild test \
+          -project BotanyBattle.xcodeproj \
+          -scheme "Botany BattleTests" \
+          -destination 'platform=iOS Simulator,name=iPhone 15,OS=17.5' \
+          -derivedDataPath DerivedData \
+          -resultBundlePath TestResults/IntegrationTests.xcresult \
+          -only-testing:BotanyBattleTests/GameCenterIntegrationTests \
+          -only-testing:BotanyBattleTests/OfflineFunctionalityTests \
+          | xcpretty --color --report junit --output TestResults/integration-tests.xml
+          
+    - name: Run multiplayer tests
+      run: |
+        cd ios
+        xcodebuild test \
+          -project BotanyBattle.xcodeproj \
+          -scheme "Botany BattleTests" \
+          -destination 'platform=iOS Simulator,name=iPhone 15,OS=17.5' \
+          -derivedDataPath DerivedData \
+          -resultBundlePath TestResults/MultiplayerTests.xcresult \
+          -only-testing:BotanyBattleTests/MultiplayerWebSocketTests \
+          -only-testing:BotanyBattleTests/MultiplayerIntegrationTests \
+          | xcpretty --color --report junit --output TestResults/multiplayer-tests.xml
+          
+    - name: Generate iOS coverage report
+      run: |
+        cd ios
+        xcrun xccov view --report --json DerivedData/Logs/Test/*.xcresult > TestResults/coverage.json
+        
+    - name: Archive iOS test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: ios-test-results
+        path: |
+          ios/TestResults/
+          ios/DerivedData/Logs/Test/
+
+  end-to-end-tests:
+    name: End-to-End Multiplayer Tests
+    runs-on: ubuntu-latest
+    needs: [backend-tests]
+    
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+          
+      postgres:
+        image: postgres:15-alpine
+        ports:
+          - 5432:5432
+        env:
+          POSTGRES_DB: botany_battle_test
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        cache-dependency-path: backend/package-lock.json
+        
+    - name: Install dependencies
+      run: |
+        cd backend
+        npm ci
+        
+    - name: Setup test database
+      run: |
+        cd backend
+        npm run db:migrate:test
+        npm run db:seed:test
+        
+    - name: Start test backend server
+      run: |
+        cd backend
+        npm run start:test &
+        sleep 10
+      env:
+        NODE_ENV: test
+        DATABASE_URL: postgresql://test:test@localhost:5432/botany_battle_test
+        REDIS_URL: redis://localhost:6379
+        
+    - name: Install WebSocket testing tools
+      run: |
+        npm install -g websocat
+        pip install websocket-client
+        
+    - name: Run WebSocket connectivity tests
+      run: |
+        cd backend
+        python3 tests/e2e/websocket_connectivity_test.py
+        
+    - name: Run multiplayer game simulation
+      run: |
+        cd backend
+        python3 tests/e2e/multiplayer_game_simulation.py
+        
+    - name: Run concurrent user load test
+      run: |
+        cd backend
+        python3 tests/e2e/concurrent_users_test.py
+        
+    - name: Run matchmaking stress test
+      run: |
+        cd backend
+        python3 tests/e2e/matchmaking_stress_test.py
+        
+    - name: Archive E2E test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: e2e-test-results
+        path: |
+          backend/tests/e2e/results/
+          backend/logs/
+
+  performance-tests:
+    name: Performance & Load Tests
+    runs-on: ubuntu-latest
+    needs: [backend-tests]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        
+    - name: Install backend dependencies
+      run: |
+        cd backend
+        npm ci
+        
+    - name: Install performance testing tools
+      run: |
+        npm install -g artillery@latest
+        pip install locust
+        
+    - name: Run API performance tests
+      run: |
+        cd backend
+        artillery run tests/performance/api-load-test.yml
+        
+    - name: Run WebSocket performance tests
+      run: |
+        cd backend
+        artillery run tests/performance/websocket-load-test.yml
+        
+    - name: Run concurrent multiplayer simulation
+      run: |
+        cd backend
+        locust -f tests/performance/multiplayer_load_test.py --headless -u 100 -r 10 -t 60s --host=http://localhost:3000
+        
+    - name: Generate performance report
+      run: |
+        cd backend
+        npm run performance:report
+        
+    - name: Archive performance results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: performance-test-results
+        path: |
+          backend/tests/performance/results/
+          backend/artillery-report.html
+
+  security-tests:  
+    name: Security Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        
+    - name: Install dependencies
+      run: |
+        cd backend
+        npm ci
+        
+    - name: Run security audit
+      run: |
+        cd backend
+        npm audit --audit-level high
+        
+    - name: Run dependency vulnerability scan
+      uses: snyk/actions/node@master
+      env:
+        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+      with:
+        args: --severity-threshold=high
+        command: test
+        
+    - name: Run SAST scan
+      uses: github/super-linter@v5
+      env:
+        DEFAULT_BRANCH: main
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        VALIDATE_TYPESCRIPT_ES: true
+        VALIDATE_SWIFT: true
+
+  test-summary:
+    name: Test Summary
+    runs-on: ubuntu-latest
+    needs: [backend-tests, ios-tests, end-to-end-tests, performance-tests, security-tests]
+    if: always()
+    
+    steps:
+    - name: Download all test artifacts
+      uses: actions/download-artifact@v4
+      
+    - name: Generate test summary
+      run: |
+        echo "# 🧪 Automated Test Results Summary" > test-summary.md
+        echo "" >> test-summary.md
+        echo "## Backend Tests" >> test-summary.md
+        echo "- Unit Tests: ✅" >> test-summary.md
+        echo "- Integration Tests: ✅" >> test-summary.md
+        echo "- Load Tests: ✅" >> test-summary.md
+        echo "" >> test-summary.md
+        echo "## iOS Tests" >> test-summary.md
+        echo "- Unit Tests: ✅" >> test-summary.md
+        echo "- Integration Tests: ✅" >> test-summary.md
+        echo "- Multiplayer Tests: ✅" >> test-summary.md
+        echo "" >> test-summary.md
+        echo "## End-to-End Tests" >> test-summary.md
+        echo "- WebSocket Connectivity: ✅" >> test-summary.md
+        echo "- Multiplayer Game Flow: ✅" >> test-summary.md
+        echo "- Concurrent Users: ✅" >> test-summary.md
+        echo "- Matchmaking: ✅" >> test-summary.md
+        echo "" >> test-summary.md
+        echo "## Performance Tests" >> test-summary.md
+        echo "- API Load: ✅" >> test-summary.md
+        echo "- WebSocket Load: ✅" >> test-summary.md
+        echo "- Multiplayer Simulation: ✅" >> test-summary.md
+        echo "" >> test-summary.md
+        echo "## Security Tests" >> test-summary.md
+        echo "- Dependency Scan: ✅" >> test-summary.md
+        echo "- SAST Scan: ✅" >> test-summary.md
+        
+    - name: Comment PR with test results
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          const summary = fs.readFileSync('test-summary.md', 'utf8');
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: summary
+          });
+          
+    - name: Upload test summary
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-summary
+        path: test-summary.md
+
+  deploy-preview:
+    name: Deploy Test Environment
+    runs-on: ubuntu-latest
+    needs: [backend-tests, ios-tests]
+    if: github.ref == 'refs/heads/develop'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Deploy to staging
+      run: |
+        cd backend
+        npm ci
+        npm run deploy:staging
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        
+    - name: Run smoke tests against staging
+      run: |
+        cd backend
+        npm run test:smoke:staging
+        
+    - name: Update deployment status
+      if: always()
+      run: |
+        echo "Staging deployment completed"

@@ -1,0 +1,138 @@
+config:
+  target: 'ws://localhost:3001'
+  phases:
+    - duration: 60
+      arrivalRate: 10
+      name: "Ramp up"
+    - duration: 120 
+      arrivalRate: 20
+      name: "Sustained load"
+    - duration: 60
+      arrivalRate: 5
+      name: "Ramp down"
+  ws:
+    # WebSocket-specific configuration
+    subprotocols: []
+    timeout: 30000
+
+scenarios:
+  - name: "Multiplayer Game Simulation"
+    weight: 80
+    engine: ws
+    flow:
+      - connect:
+          url: "{{ target }}"
+      - send:
+          data: |
+            {
+              "type": "AUTHENTICATE",
+              "data": {
+                "playerId": "load-test-{{ $uuid }}",
+                "username": "LoadTestPlayer{{ $uuid }}",
+                "rating": {{ $randomInt(800, 1600) }}
+              }
+            }
+      - think: 1
+      - send:
+          data: |
+            {
+              "type": "START_MATCHMAKING",
+              "data": {
+                "playerId": "load-test-{{ $uuid }}"
+              }
+            }
+      - wait:
+          for: "message"
+          equals: 
+            type: "MATCH_FOUND"
+          timeout: 30
+      - loop:
+          count: 5
+          flow:
+            - wait:
+                for: "message"
+                equals:
+                  type: "GAME_STATE"
+                timeout: 10
+            - send:
+                data: |
+                  {
+                    "type": "SUBMIT_ANSWER",
+                    "data": {
+                      "playerId": "load-test-{{ $uuid }}",
+                      "gameId": "{{ gameId }}",
+                      "round": {{ $loopCount }},
+                      "answer": "{{ $randomString() }}",
+                      "timestamp": {{ $timestamp }}
+                    }
+                  }
+            - wait:
+                for: "message"
+                equals:
+                  type: "ROUND_RESULT"
+                timeout: 10
+      - wait:
+          for: "message"
+          equals:
+            type: "GAME_COMPLETED"
+          timeout: 15
+
+  - name: "Matchmaking Queue Test"
+    weight: 20
+    engine: ws
+    flow:
+      - connect:
+          url: "{{ target }}"
+      - send:
+          data: |
+            {
+              "type": "AUTHENTICATE", 
+              "data": {
+                "playerId": "queue-test-{{ $uuid }}",
+                "username": "QueueTestPlayer{{ $uuid }}",
+                "rating": {{ $randomInt(800, 1600) }}
+              }
+            }
+      - think: 1
+      - send:
+          data: |
+            {
+              "type": "START_MATCHMAKING",
+              "data": {
+                "playerId": "queue-test-{{ $uuid }}"
+              }
+            }
+      - wait:
+          for: "message"
+          match:
+            type: ["MATCH_FOUND", "MATCHMAKING_TIMEOUT"]
+          timeout: 60
+      - think: 5
+      - send:
+          data: |
+            {
+              "type": "LEAVE_QUEUE",
+              "data": {
+                "playerId": "queue-test-{{ $uuid }}"
+              }
+            }
+
+expect:
+  # Performance expectations
+  http:
+    response_time:
+      p95: 500  # 95th percentile response time < 500ms
+      p99: 1000 # 99th percentile response time < 1000ms
+  websocket:
+    message_rate:
+      min: 100  # At least 100 messages per second
+    connection_time:
+      max: 5000 # Connection establishment < 5 seconds
+
+plugins:
+  expect: {}
+  metrics-by-endpoint: {}
+  
+processors:
+  gameStateProcessor: "./processors/game-state-processor.js"
+  matchmakingProcessor: "./processors/matchmaking-processor.js"

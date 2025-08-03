@@ -330,8 +330,11 @@ struct SimpleGameView: View {
                     }
                 }
                 
-                if isSearching {
-                    VStack(spacing: 16) {
+                Spacer()
+                
+                // Fixed height container to prevent jumping
+                VStack(spacing: 16) {
+                    if isSearching {
                         ProgressView()
                             .scaleEffect(1.5)
                             .tint(.green)
@@ -345,8 +348,7 @@ struct SimpleGameView: View {
                         .foregroundColor(.red)
                     }
                 }
-                
-                Spacer()
+                .frame(minHeight: 120) // Reserve space to prevent jumping
             }
             .padding()
             .navigationTitle("Botany Battle")
@@ -705,6 +707,7 @@ struct SimpleSettingsView: View {
 struct SimpleTutorialView: View {
     @Binding var showTutorial: Bool
     @State private var currentStep = 0
+    @Environment(\.verticalSizeClass) var verticalSizeClass
     
     private let tutorialSteps = [
         TutorialStep(title: "Welcome to Botany Battle!", description: "Test your botanical knowledge in head-to-head battles!", icon: "leaf.fill"),
@@ -715,12 +718,14 @@ struct SimpleTutorialView: View {
     ]
     
     var body: some View {
+        let isLandscape = verticalSizeClass == .compact
+        
         VStack(spacing: 0) {
             // Progress bar
             VStack(spacing: 8) {
                 HStack {
                     Text("Tutorial")
-                        .font(.headline)
+                        .font(isLandscape ? .subheadline : .headline)
                     
                     Spacer()
                     
@@ -732,33 +737,61 @@ struct SimpleTutorialView: View {
                 ProgressView(value: Double(currentStep), total: Double(tutorialSteps.count - 1))
                     .tint(.green)
             }
-            .padding()
+            .padding(isLandscape ? 12 : 16)
             .background(Color(.systemGray6))
             
             // Content
-            ScrollView {
-                VStack(spacing: 32) {
-                    Spacer(minLength: 40)
-                    
+            if isLandscape {
+                // Landscape Layout: Side-by-side
+                HStack(spacing: 32) {
+                    // Left side: Icon
                     Image(systemName: tutorialSteps[currentStep].icon)
-                        .font(.system(size: 60))
+                        .font(.system(size: isLandscape ? 50 : 60))
                         .foregroundColor(.green)
+                        .frame(maxWidth: .infinity)
                     
+                    // Right side: Text content
                     VStack(spacing: 16) {
                         Text(tutorialSteps[currentStep].title)
-                            .font(.largeTitle)
+                            .font(.title2)
                             .fontWeight(.bold)
-                            .multilineTextAlignment(.center)
+                            .multilineTextAlignment(.leading)
                         
                         Text(tutorialSteps[currentStep].description)
                             .font(.body)
-                            .multilineTextAlignment(.center)
+                            .multilineTextAlignment(.leading)
                             .foregroundColor(.secondary)
                     }
-                    
-                    Spacer(minLength: 40)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .padding(.horizontal, 32)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                // Portrait Layout: Original vertical layout
+                ScrollView {
+                    VStack(spacing: 32) {
+                        Spacer(minLength: 40)
+                        
+                        Image(systemName: tutorialSteps[currentStep].icon)
+                            .font(.system(size: 60))
+                            .foregroundColor(.green)
+                        
+                        VStack(spacing: 16) {
+                            Text(tutorialSteps[currentStep].title)
+                                .font(.largeTitle)
+                                .fontWeight(.bold)
+                                .multilineTextAlignment(.center)
+                            
+                            Text(tutorialSteps[currentStep].description)
+                                .font(.body)
+                                .multilineTextAlignment(.center)
+                                .foregroundColor(.secondary)
+                        }
+                        
+                        Spacer(minLength: 40)
+                    }
+                    .padding(.horizontal, 32)
+                }
             }
             
             // Navigation
@@ -769,7 +802,7 @@ struct SimpleTutorialView: View {
                             currentStep -= 1
                         }
                         .frame(maxWidth: .infinity)
-                        .padding()
+                        .padding(isLandscape ? 12 : 16)
                         .background(Color(.systemGray6))
                         .foregroundColor(.primary)
                         .cornerRadius(12)
@@ -783,7 +816,7 @@ struct SimpleTutorialView: View {
                             currentStep += 1
                         }
                         .frame(maxWidth: .infinity)
-                        .padding()
+                        .padding(isLandscape ? 12 : 16)
                         .background(Color.green)
                         .foregroundColor(.white)
                         .cornerRadius(12)
@@ -792,7 +825,7 @@ struct SimpleTutorialView: View {
                             showTutorial = false
                         }
                         .frame(maxWidth: .infinity)
-                        .padding()
+                        .padding(isLandscape ? 12 : 16)
                         .background(Color.green)
                         .foregroundColor(.white)
                         .cornerRadius(12)
@@ -807,7 +840,7 @@ struct SimpleTutorialView: View {
                     .foregroundColor(.secondary)
                 }
             }
-            .padding()
+            .padding(isLandscape ? 12 : 16)
         }
     }
 }
@@ -892,6 +925,7 @@ struct GameScreenView: View {
     @State private var gameEndTime = Date()
     @State private var isLoadingPlants = true
     @State private var availablePlants: [PlantData] = []
+    @Environment(\.verticalSizeClass) var verticalSizeClass
     
     // Sample plant question - will be replaced with real data
     @State private var currentPlant = PlantQuestion(
@@ -902,13 +936,15 @@ struct GameScreenView: View {
     )
     
     var body: some View {
+        let isLandscape = verticalSizeClass == .compact
+        
         NavigationView {
-            VStack(spacing: 24) {
+            VStack(spacing: isLandscape ? 8 : 24) {
                 // Header
                 VStack(spacing: 8) {
                     HStack {
                         Text("Question \(currentQuestion)/5")
-                            .font(.headline)
+                            .font(isLandscape ? .subheadline : .headline)
                             .foregroundColor(.secondary)
                         
                         Spacer()
@@ -917,14 +953,14 @@ struct GameScreenView: View {
                             Image(systemName: "timer")
                                 .foregroundColor(.orange)
                             Text("\(timeRemaining)s")
-                                .font(.headline)
+                                .font(isLandscape ? .subheadline : .headline)
                                 .foregroundColor(.orange)
                         }
                     }
                     
                     HStack {
                         Text("Score: \(score)")
-                            .font(.title2)
+                            .font(isLandscape ? .headline : .title2)
                             .fontWeight(.semibold)
                         
                         Spacer()
@@ -937,165 +973,287 @@ struct GameScreenView: View {
                             .cornerRadius(8)
                     }
                 }
+                .padding(isLandscape ? 12 : 16)
                 
-                // Plant Image
-                VStack(spacing: 16) {
-                    if isLoadingPlants {
-                        ProgressView("Loading plants...")
-                            .frame(height: 150)
-                            .frame(maxWidth: .infinity)
-                            .background(Color(.systemGray6))
-                            .cornerRadius(12)
-                    } else if currentPlant.imageName.hasPrefix("http") {
-                        // Real plant image from iNaturalist
-                        AsyncImage(url: URL(string: currentPlant.imageName)) { image in
-                            image
-                                .resizable()
-                                .aspectRatio(contentMode: .fill)
-                        } placeholder: {
-                            ProgressView()
-                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                if isLandscape {
+                    // Landscape Layout: Image left, controls right
+                    HStack(spacing: 16) {
+                        // Left side: Plant Image (60% width)
+                        VStack(spacing: 8) {
+                            if isLoadingPlants {
+                                ProgressView("Loading plants...")
+                                    .frame(height: 120)
+                                    .frame(maxWidth: .infinity)
+                                    .background(Color(.systemGray6))
+                                    .cornerRadius(12)
+                            } else if currentPlant.imageName.hasPrefix("http") {
+                                AsyncImage(url: URL(string: currentPlant.imageName)) { image in
+                                    image
+                                        .resizable()
+                                        .aspectRatio(contentMode: .fill)
+                                } placeholder: {
+                                    ProgressView()
+                                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                }
+                                .frame(height: 120)
+                                .frame(maxWidth: .infinity)
+                                .background(Color(.systemGray6))
+                                .cornerRadius(12)
+                                .clipped()
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(Color.green, lineWidth: 2)
+                                )
+                            } else {
+                                Text(currentPlant.imageName)
+                                    .font(.system(size: 80))
+                                    .frame(height: 120)
+                                    .frame(maxWidth: .infinity)
+                                    .background(Color(.systemGray6))
+                                    .cornerRadius(12)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 12)
+                                            .stroke(Color.green, lineWidth: 2)
+                                    )
+                            }
+                            
+                            Text("What plant is this?")
+                                .font(.headline)
+                                .fontWeight(.medium)
                         }
-                        .frame(height: 150)
                         .frame(maxWidth: .infinity)
-                        .background(Color(.systemGray6))
-                        .cornerRadius(12)
-                        .clipped()
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(Color.green, lineWidth: 2)
-                        )
-                    } else {
-                        // Fallback emoji display
-                        Text(currentPlant.imageName)
-                            .font(.system(size: 120))
-                            .frame(height: 150)
-                            .frame(maxWidth: .infinity)
-                            .background(Color(.systemGray6))
-                            .cornerRadius(12)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .stroke(Color.green, lineWidth: 2)
-                            )
+                        
+                        // Right side: Answer Options (40% width)
+                        VStack(spacing: 8) {
+                            ForEach(Array(currentPlant.options.enumerated()), id: \.offset) { index, option in
+                                Button(action: {
+                                    selectAnswer(index)
+                                }) {
+                                    HStack {
+                                        Text(option)
+                                            .font(.subheadline)
+                                            .foregroundColor(getAnswerTextColor(index))
+                                            .lineLimit(2)
+                                        
+                                        Spacer()
+                                        
+                                        if selectedAnswer != nil {
+                                            if isCorrectAnswer(index) {
+                                                Image(systemName: "checkmark.circle.fill")
+                                                    .foregroundColor(.white)
+                                            } else if selectedAnswer == index && !isCorrect {
+                                                Image(systemName: "xmark.circle.fill")
+                                                    .foregroundColor(.white)
+                                            }
+                                        }
+                                    }
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 8)
+                                    .background(getAnswerBackgroundColor(index))
+                                    .cornerRadius(8)
+                                }
+                                .disabled(selectedAnswer != nil)
+                            }
+                            
+                            // Compact feedback in landscape
+                            if selectedAnswer != nil {
+                                VStack(spacing: 4) {
+                                    HStack {
+                                        Image(systemName: isCorrect ? "checkmark.circle.fill" : "xmark.circle.fill")
+                                            .foregroundColor(isCorrect ? .green : .red)
+                                        
+                                        Text(isCorrect ? "Correct!" : "Incorrect")
+                                            .font(.caption)
+                                            .fontWeight(.semibold)
+                                            .foregroundColor(isCorrect ? .green : .red)
+                                        
+                                        Spacer()
+                                    }
+                                    
+                                    if !isCorrect {
+                                        HStack {
+                                            Text("Answer: \(currentPlant.correctAnswer)")
+                                                .font(.caption2)
+                                                .foregroundColor(.green)
+                                                .lineLimit(1)
+                                            Spacer()
+                                        }
+                                    }
+                                }
+                                .padding(8)
+                                .background(Color(.systemGray6))
+                                .cornerRadius(6)
+                            }
+                            
+                            if showResult && !gameComplete {
+                                Button("Next Question") {
+                                    nextQuestion()
+                                }
+                                .font(.subheadline)
+                                .foregroundColor(.white)
+                                .frame(maxWidth: .infinity)
+                                .padding(8)
+                                .background(Color.green)
+                                .cornerRadius(8)
+                            }
+                        }
+                        .frame(maxWidth: .infinity)
                     }
-                    
-                    Text("What plant is this?")
-                        .font(.title2)
-                        .fontWeight(.medium)
-                }
-                
-                // Answer Options
-                VStack(spacing: 12) {
-                    ForEach(Array(currentPlant.options.enumerated()), id: \.offset) { index, option in
-                        Button(action: {
-                            selectAnswer(index)
-                        }) {
-                            HStack {
-                                Text(option)
-                                    .font(.headline)
-                                    .foregroundColor(getAnswerTextColor(index))
+                    .padding(.horizontal, 16)
+                } else {
+                    // Portrait Layout: Original vertical layout
+                    VStack(spacing: 16) {
+                        // Plant Image
+                        VStack(spacing: 16) {
+                            if isLoadingPlants {
+                                ProgressView("Loading plants...")
+                                    .frame(height: 150)
+                                    .frame(maxWidth: .infinity)
+                                    .background(Color(.systemGray6))
+                                    .cornerRadius(12)
+                            } else if currentPlant.imageName.hasPrefix("http") {
+                                AsyncImage(url: URL(string: currentPlant.imageName)) { image in
+                                    image
+                                        .resizable()
+                                        .aspectRatio(contentMode: .fill)
+                                } placeholder: {
+                                    ProgressView()
+                                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                }
+                                .frame(height: 150)
+                                .frame(maxWidth: .infinity)
+                                .background(Color(.systemGray6))
+                                .cornerRadius(12)
+                                .clipped()
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(Color.green, lineWidth: 2)
+                                )
+                            } else {
+                                Text(currentPlant.imageName)
+                                    .font(.system(size: 120))
+                                    .frame(height: 150)
+                                    .frame(maxWidth: .infinity)
+                                    .background(Color(.systemGray6))
+                                    .cornerRadius(12)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 12)
+                                            .stroke(Color.green, lineWidth: 2)
+                                    )
+                            }
+                            
+                            Text("What plant is this?")
+                                .font(.title2)
+                                .fontWeight(.medium)
+                        }
+                        
+                        // Answer Options
+                        VStack(spacing: 12) {
+                            ForEach(Array(currentPlant.options.enumerated()), id: \.offset) { index, option in
+                                Button(action: {
+                                    selectAnswer(index)
+                                }) {
+                                    HStack {
+                                        Text(option)
+                                            .font(.headline)
+                                            .foregroundColor(getAnswerTextColor(index))
+                                        
+                                        Spacer()
+                                        
+                                        if selectedAnswer != nil {
+                                            if isCorrectAnswer(index) {
+                                                Image(systemName: "checkmark.circle.fill")
+                                                    .foregroundColor(.white)
+                                            } else if selectedAnswer == index && !isCorrect {
+                                                Image(systemName: "xmark.circle.fill")
+                                                    .foregroundColor(.white)
+                                            }
+                                        }
+                                    }
+                                    .padding()
+                                    .background(getAnswerBackgroundColor(index))
+                                    .cornerRadius(12)
+                                }
+                                .disabled(selectedAnswer != nil)
+                            }
+                        }
+                        
+                        // Feedback Box
+                        if selectedAnswer != nil {
+                            VStack(spacing: 8) {
+                                HStack {
+                                    Image(systemName: isCorrect ? "checkmark.circle.fill" : "xmark.circle.fill")
+                                        .foregroundColor(isCorrect ? .green : .red)
+                                    
+                                    Text(isCorrect ? "Correct!" : "Incorrect")
+                                        .font(.subheadline)
+                                        .fontWeight(.semibold)
+                                        .foregroundColor(isCorrect ? .green : .red)
+                                    
+                                    Spacer()
+                                }
                                 
-                                Spacer()
+                                if !isCorrect {
+                                    HStack(spacing: 8) {
+                                        Image(systemName: "lightbulb.fill")
+                                            .font(.caption)
+                                            .foregroundColor(.green)
+                                        
+                                        Text("Correct answer:")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                        
+                                        Text(currentPlant.correctAnswer)
+                                            .font(.caption)
+                                            .fontWeight(.semibold)
+                                            .foregroundColor(.green)
+                                            .lineLimit(1)
+                                        
+                                        Spacer()
+                                    }
+                                }
                                 
-                                // Show icons after answer selection
-                                if selectedAnswer != nil {
-                                    if isCorrectAnswer(index) {
-                                        // Always show checkmark for correct answer
-                                        Image(systemName: "checkmark.circle.fill")
-                                            .foregroundColor(.white)
-                                    } else if selectedAnswer == index && !isCorrect {
-                                        // Show X for selected wrong answer
-                                        Image(systemName: "xmark.circle.fill")
-                                            .foregroundColor(.white)
+                                if !currentPlant.fact.isEmpty {
+                                    HStack(spacing: 8) {
+                                        Image(systemName: "info.circle.fill")
+                                            .font(.caption)
+                                            .foregroundColor(.blue)
+                                        
+                                        Text(currentPlant.fact)
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                            .lineLimit(nil)
+                                            .fixedSize(horizontal: false, vertical: true)
+                                        
+                                        Spacer()
                                     }
                                 }
                             }
+                            .frame(height: 80)
+                            .frame(maxWidth: .infinity, alignment: .topLeading)
+                            .padding(.vertical, 8)
+                            .padding(.horizontal, 12)
+                            .background(Color(.systemGray6))
+                            .cornerRadius(8)
+                        }
+                        
+                        Spacer()
+                        
+                        if showResult && !gameComplete {
+                            Button("Next Question") {
+                                nextQuestion()
+                            }
+                            .font(.headline)
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
                             .padding()
-                            .background(getAnswerBackgroundColor(index))
+                            .background(Color.green)
                             .cornerRadius(12)
                         }
-                        .disabled(selectedAnswer != nil)
                     }
-                }
-                
-                
-                // FIXED SIZE FEEDBACK BOX - Show after answer selection
-                if selectedAnswer != nil {
-                    VStack(spacing: 8) {
-                        // Status line
-                        HStack {
-                            Image(systemName: isCorrect ? "checkmark.circle.fill" : "xmark.circle.fill")
-                                .foregroundColor(isCorrect ? .green : .red)
-                            
-                            Text(isCorrect ? "Correct!" : "Incorrect")
-                                .font(.subheadline)
-                                .fontWeight(.semibold)
-                                .foregroundColor(isCorrect ? .green : .red)
-                            
-                            Spacer()
-                        }
-                        
-                        // Compact correct answer display when wrong
-                        if !isCorrect {
-                            HStack(spacing: 8) {
-                                Image(systemName: "lightbulb.fill")
-                                    .font(.caption)
-                                    .foregroundColor(.green)
-                                
-                                Text("Correct answer:")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                                
-                                Text(currentPlant.correctAnswer)
-                                    .font(.caption)
-                                    .fontWeight(.semibold)
-                                    .foregroundColor(.green)
-                                    .lineLimit(1)
-                                
-                                Spacer()
-                            }
-                        }
-                        
-                        // Plant fact in feedback box
-                        if !currentPlant.fact.isEmpty {
-                            HStack(spacing: 8) {
-                                Image(systemName: "info.circle.fill")
-                                    .font(.caption)
-                                    .foregroundColor(.blue)
-                                
-                                Text(currentPlant.fact)
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                                    .lineLimit(nil)
-                                    .fixedSize(horizontal: false, vertical: true)
-                                
-                                Spacer()
-                            }
-                        }
-                    }
-                    .frame(height: 80)
-                    .frame(maxWidth: .infinity, alignment: .topLeading)
-                    .padding(.vertical, 8)
-                    .padding(.horizontal, 12)
-                    .background(Color(.systemGray6))
-                    .cornerRadius(8)
-                }
-                
-                Spacer()
-                
-                if showResult && !gameComplete {
-                    Button("Next Question") {
-                        nextQuestion()
-                    }
-                    .font(.headline)
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
                     .padding()
-                    .background(Color.green)
-                    .cornerRadius(12)
                 }
             }
-            .padding()
             .navigationTitle("Plant Battle")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -1300,6 +1458,7 @@ struct GameResultsView: View {
     let elapsedTime: TimeInterval?
     let onPlayAgain: () -> Void
     let onExit: () -> Void
+    @Environment(\.verticalSizeClass) var verticalSizeClass
     
     private var accuracy: Double {
         return Double(correctAnswers) / Double(totalQuestions)
@@ -1331,44 +1490,222 @@ struct GameResultsView: View {
     }
     
     var body: some View {
+        let isLandscape = verticalSizeClass == .compact
+        
         NavigationView {
-            VStack(spacing: 32) {
-                Spacer()
-                
-                VStack(spacing: 16) {
-                    Text("🎉")
-                        .font(.system(size: 80))
+            ScrollView {
+                VStack(spacing: isLandscape ? 8 : 16) {
+                    Spacer(minLength: isLandscape ? 10 : 20)
                     
-                    Text("Game Complete!")
-                        .font(.largeTitle)
-                        .fontWeight(.bold)
-                    
-                    Text(gameMode.rawValue)
-                        .font(.title2)
-                        .foregroundColor(.secondary)
-                }
-                
-                VStack(spacing: 24) {
-                    // Score Section
-                    VStack(spacing: 12) {
-                        Text("Your Score")
-                            .font(.headline)
-                            .foregroundColor(.secondary)
+                    if isLandscape {
+                    // Landscape Layout: Compact horizontal layout
+                    HStack(spacing: 24) {
+                        // Left side: Header and Score
+                        VStack(spacing: 8) {
+                            Text("🎉")
+                                .font(.system(size: 32))
+                            
+                            Text("Game Complete!")
+                                .font(.title2)
+                                .fontWeight(.bold)
+                            
+                            Text(gameMode.rawValue)
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                            
+                            Text("Your Score")
+                                .font(.headline)
+                                .foregroundColor(.secondary)
+                                .padding(.top, 8)
+                            
+                            Text("\(finalScore)")
+                                .font(.system(size: 36, weight: .bold, design: .rounded))
+                                .foregroundColor(performanceColor)
+                        }
+                        .frame(maxWidth: .infinity)
                         
-                        Text("\(finalScore)")
-                            .font(.system(size: 60, weight: .bold, design: .rounded))
-                            .foregroundColor(performanceColor)
-                    }
-                    
-                    // Performance Section
-                    VStack(spacing: 16) {
-                        if elapsedTime != nil {
-                            // Time Attack mode - show 4 stats in 2x2 grid
-                            VStack(spacing: 16) {
-                                HStack(spacing: 32) {
-                                    VStack {
+                        // Right side: Stats and Message
+                        VStack(spacing: 12) {
+                            // Stats
+                            if elapsedTime != nil {
+                                // Time Attack mode - compact 2x2 grid
+                                VStack(spacing: 8) {
+                                    HStack(spacing: 12) {
+                                        VStack(spacing: 2) {
+                                            Text("\(correctAnswers)")
+                                                .font(.headline)
+                                                .fontWeight(.bold)
+                                                .foregroundColor(.green)
+                                            Text("Correct")
+                                                .font(.caption2)
+                                                .foregroundColor(.secondary)
+                                        }
+                                        
+                                        VStack(spacing: 2) {
+                                            Text("\(totalQuestions - correctAnswers)")
+                                                .font(.headline)
+                                                .fontWeight(.bold)
+                                                .foregroundColor(.red)
+                                            Text("Wrong")
+                                                .font(.caption2)
+                                                .foregroundColor(.secondary)
+                                        }
+                                    }
+                                    
+                                    HStack(spacing: 12) {
+                                        VStack(spacing: 2) {
+                                            Text("\(Int(accuracy * 100))%")
+                                                .font(.headline)
+                                                .fontWeight(.bold)
+                                                .foregroundColor(performanceColor)
+                                            Text("Accuracy")
+                                                .font(.caption2)
+                                                .foregroundColor(.secondary)
+                                        }
+                                        
+                                        VStack(spacing: 2) {
+                                            Text(formattedTime)
+                                                .font(.headline)
+                                                .fontWeight(.bold)
+                                                .foregroundColor(.blue)
+                                            Text("Time")
+                                                .font(.caption2)
+                                                .foregroundColor(.secondary)
+                                        }
+                                    }
+                                }
+                            } else {
+                                // Other modes - horizontal stats
+                                HStack(spacing: 16) {
+                                    VStack(spacing: 2) {
                                         Text("\(correctAnswers)")
-                                            .font(.title)
+                                            .font(.headline)
+                                            .fontWeight(.bold)
+                                            .foregroundColor(.green)
+                                        Text("Correct")
+                                            .font(.caption2)
+                                            .foregroundColor(.secondary)
+                                    }
+                                    
+                                    VStack(spacing: 2) {
+                                        Text("\(totalQuestions - correctAnswers)")
+                                            .font(.headline)
+                                            .fontWeight(.bold)
+                                            .foregroundColor(.red)
+                                        Text("Wrong")
+                                            .font(.caption2)
+                                            .foregroundColor(.secondary)
+                                    }
+                                    
+                                    VStack(spacing: 2) {
+                                        Text("\(Int(accuracy * 100))%")
+                                            .font(.headline)
+                                            .fontWeight(.bold)
+                                            .foregroundColor(performanceColor)
+                                        Text("Accuracy")
+                                            .font(.caption2)
+                                            .foregroundColor(.secondary)
+                                    }
+                                }
+                            }
+                            
+                            Text(performanceMessage)
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                                .multilineTextAlignment(.center)
+                                .lineLimit(2)
+                                .foregroundColor(performanceColor)
+                                .padding(.top, 4)
+                        }
+                        .padding(12)
+                        .background(Color(.systemGray6))
+                        .cornerRadius(12)
+                        .frame(maxWidth: .infinity)
+                    }
+                    .padding(.horizontal, 20)
+                } else {
+                    // Portrait Layout: Compact vertical layout
+                    VStack(spacing: 16) {
+                        // Header
+                        VStack(spacing: 8) {
+                            Text("🎉")
+                                .font(.system(size: 50))
+                            
+                            Text("Game Complete!")
+                                .font(.title)
+                                .fontWeight(.bold)
+                            
+                            Text(gameMode.rawValue)
+                                .font(.headline)
+                                .foregroundColor(.secondary)
+                        }
+                        
+                        // Score
+                        VStack(spacing: 8) {
+                            Text("Your Score")
+                                .font(.headline)
+                                .foregroundColor(.secondary)
+                            
+                            Text("\(finalScore)")
+                                .font(.system(size: 48, weight: .bold, design: .rounded))
+                                .foregroundColor(performanceColor)
+                        }
+                        
+                        // Stats
+                        VStack(spacing: 12) {
+                            if elapsedTime != nil {
+                                // Time Attack mode - 2x2 grid
+                                VStack(spacing: 12) {
+                                    HStack(spacing: 24) {
+                                        VStack(spacing: 4) {
+                                            Text("\(correctAnswers)")
+                                                .font(.title2)
+                                                .fontWeight(.bold)
+                                                .foregroundColor(.green)
+                                            Text("Correct")
+                                                .font(.caption)
+                                                .foregroundColor(.secondary)
+                                        }
+                                        
+                                        VStack(spacing: 4) {
+                                            Text("\(totalQuestions - correctAnswers)")
+                                                .font(.title2)
+                                                .fontWeight(.bold)
+                                                .foregroundColor(.red)
+                                            Text("Wrong")
+                                                .font(.caption)
+                                                .foregroundColor(.secondary)
+                                        }
+                                    }
+                                    
+                                    HStack(spacing: 24) {
+                                        VStack(spacing: 4) {
+                                            Text("\(Int(accuracy * 100))%")
+                                                .font(.title2)
+                                                .fontWeight(.bold)
+                                                .foregroundColor(performanceColor)
+                                            Text("Accuracy")
+                                                .font(.caption)
+                                                .foregroundColor(.secondary)
+                                        }
+                                        
+                                        VStack(spacing: 4) {
+                                            Text(formattedTime)
+                                                .font(.title2)
+                                                .fontWeight(.bold)
+                                                .foregroundColor(.blue)
+                                            Text("Time")
+                                                .font(.caption)
+                                                .foregroundColor(.secondary)
+                                        }
+                                    }
+                                }
+                            } else {
+                                // Other modes - horizontal stats
+                                HStack(spacing: 24) {
+                                    VStack(spacing: 4) {
+                                        Text("\(correctAnswers)")
+                                            .font(.title2)
                                             .fontWeight(.bold)
                                             .foregroundColor(.green)
                                         Text("Correct")
@@ -1376,98 +1713,54 @@ struct GameResultsView: View {
                                             .foregroundColor(.secondary)
                                     }
                                     
-                                    VStack {
+                                    VStack(spacing: 4) {
                                         Text("\(totalQuestions - correctAnswers)")
-                                            .font(.title)
+                                            .font(.title2)
                                             .fontWeight(.bold)
                                             .foregroundColor(.red)
                                         Text("Wrong")
                                             .font(.caption)
                                             .foregroundColor(.secondary)
                                     }
-                                }
-                                
-                                HStack(spacing: 32) {
-                                    VStack {
+                                    
+                                    VStack(spacing: 4) {
                                         Text("\(Int(accuracy * 100))%")
-                                            .font(.title)
+                                            .font(.title2)
                                             .fontWeight(.bold)
                                             .foregroundColor(performanceColor)
                                         Text("Accuracy")
                                             .font(.caption)
                                             .foregroundColor(.secondary)
                                     }
-                                    
-                                    VStack {
-                                        Text(formattedTime)
-                                            .font(.title)
-                                            .fontWeight(.bold)
-                                            .foregroundColor(.blue)
-                                        Text("Time")
-                                            .font(.caption)
-                                            .foregroundColor(.secondary)
-                                    }
-                                }
-                            }
-                        } else {
-                            // Other modes - show 3 stats in single row
-                            HStack(spacing: 32) {
-                                VStack {
-                                    Text("\(correctAnswers)")
-                                        .font(.title)
-                                        .fontWeight(.bold)
-                                        .foregroundColor(.green)
-                                    Text("Correct")
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                }
-                                
-                                VStack {
-                                    Text("\(totalQuestions - correctAnswers)")
-                                        .font(.title)
-                                        .fontWeight(.bold)
-                                        .foregroundColor(.red)
-                                    Text("Wrong")
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                }
-                                
-                                VStack {
-                                    Text("\(Int(accuracy * 100))%")
-                                        .font(.title)
-                                        .fontWeight(.bold)
-                                        .foregroundColor(performanceColor)
-                                    Text("Accuracy")
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
                                 }
                             }
                         }
-                    }
-                    .padding()
-                    .background(Color(.systemGray6))
-                    .cornerRadius(12)
+                        .padding(16)
+                        .background(Color(.systemGray6))
+                        .cornerRadius(12)
                         
-                    Text(performanceMessage)
-                        .font(.title3)
-                        .fontWeight(.medium)
-                        .multilineTextAlignment(.center)
-                        .lineLimit(nil) // Allow unlimited lines to prevent truncation
-                        .fixedSize(horizontal: false, vertical: true) // Enable vertical expansion
-                        .padding(.horizontal, 16) // Ensure margins from screen edges
-                        .foregroundColor(performanceColor)
+                        Text(performanceMessage)
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                            .multilineTextAlignment(.center)
+                            .lineLimit(2)
+                            .foregroundColor(performanceColor)
+                            .padding(.horizontal, 20)
+                    }
+                    .padding(.horizontal, 20)
                 }
                 
-                Spacer()
+                Spacer(minLength: isLandscape ? 10 : 20)
                 
-                VStack(spacing: 12) {
+                // Action Buttons
+                VStack(spacing: 10) {
                     Button("Play Again") {
                         onPlayAgain()
                     }
                     .font(.headline)
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
-                    .padding()
+                    .padding(isLandscape ? 10 : 14)
                     .background(Color.green)
                     .cornerRadius(12)
                     
@@ -1477,13 +1770,15 @@ struct GameResultsView: View {
                     .font(.headline)
                     .foregroundColor(.green)
                     .frame(maxWidth: .infinity)
-                    .padding()
+                    .padding(isLandscape ? 10 : 14)
                     .background(Color.green.opacity(0.1))
                     .cornerRadius(12)
                 }
-                .padding(.horizontal)
+                .padding(.horizontal, 20)
+                .padding(.bottom, isLandscape ? 10 : 20)
+                }
+                .padding(isLandscape ? 12 : 16)
             }
-            .padding()
             .navigationTitle("Results")
             .navigationBarTitleDisplayMode(.inline)
             .navigationBarHidden(true)

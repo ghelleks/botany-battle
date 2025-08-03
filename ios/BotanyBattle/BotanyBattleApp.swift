@@ -5,7 +5,7 @@ import GameKit
 struct BotanyBattleApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            SimpleContentView()
         }
     }
 }
