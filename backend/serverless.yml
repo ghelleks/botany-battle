@@ -214,7 +214,7 @@ resources:
         CacheUsageLimits:
           DataStorage:
             Maximum: 5
-            Unit: gb
+            Unit: GB
           ECPUPerSecond:
             Maximum: 5000
         SecurityGroupIds:
@@ -269,27 +269,28 @@ resources:
         Description: API Key for ${self:service} ${self:provider.stage}
         Enabled: true
 
-    ApiGatewayUsagePlan:
-      Type: AWS::ApiGateway::UsagePlan
-      Properties:
-        UsagePlanName: ${self:service}-${self:provider.stage}-usage-plan
-        Description: Usage plan for ${self:service} ${self:provider.stage}
-        Throttle:
-          BurstLimit: 500
-          RateLimit: 100
-        Quota:
-          Limit: 10000
-          Period: DAY
-        ApiStages:
-          - ApiId: !Ref RestApiApigEvent
-            Stage: ${self:provider.stage}
+# Temporarily commented out due to resource reference issue
+    # ApiGatewayUsagePlan:
+    #   Type: AWS::ApiGateway::UsagePlan
+    #   Properties:
+    #     UsagePlanName: ${self:service}-${self:provider.stage}-usage-plan
+    #     Description: Usage plan for ${self:service} ${self:provider.stage}
+    #     Throttle:
+    #       BurstLimit: 500
+    #       RateLimit: 100
+    #     Quota:
+    #       Limit: 10000
+    #       Period: DAY
+    #     ApiStages:
+    #       - ApiId: !Ref RestApiApigEvent
+    #         Stage: ${self:provider.stage}
 
-    ApiGatewayUsagePlanKey:
-      Type: AWS::ApiGateway::UsagePlanKey
-      Properties:
-        KeyId: !Ref ApiGatewayApiKey
-        KeyType: API_KEY
-        UsagePlanId: !Ref ApiGatewayUsagePlan
+    # ApiGatewayUsagePlanKey:
+    #   Type: AWS::ApiGateway::UsagePlanKey
+    #   Properties:
+    #     KeyId: !Ref ApiGatewayApiKey
+    #     KeyType: API_KEY
+    #     UsagePlanId: !Ref ApiGatewayUsagePlan
 
     ErrorAlarm:
       Type: AWS::CloudWatch::Alarm
