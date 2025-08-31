@@ -180,7 +180,10 @@ async function generatePlantQuestions(
       options,
       correctAnswer: correctPlant.commonName,
       difficulty,
-      imageUrl: await imageProcessor.getOptimizedImageUrl(correctPlant.id, "medium"),
+      imageUrl: await imageProcessor.getOptimizedImageUrl(
+        correctPlant.id,
+        "medium",
+      ),
     });
   }
 
@@ -298,7 +301,10 @@ async function getPlantDetails(
       };
     }
 
-    plant.imageUrl = await imageProcessor.getOptimizedImageUrl(plantId, "large");
+    plant.imageUrl = await imageProcessor.getOptimizedImageUrl(
+      plantId,
+      "large",
+    );
 
     const response = {
       statusCode: 200,
@@ -387,7 +393,10 @@ async function getRandomPlants(count: number): Promise<APIGatewayProxyResult> {
   const selectedPlants = shuffled.slice(0, count);
 
   for (const plant of selectedPlants) {
-    plant.imageUrl = await imageProcessor.getOptimizedImageUrl(plant.id, "medium");
+    plant.imageUrl = await imageProcessor.getOptimizedImageUrl(
+      plant.id,
+      "medium",
+    );
   }
 
   return {

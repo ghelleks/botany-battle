@@ -52,7 +52,11 @@ export class ImageProcessor {
       const sourceBuffer = await this.downloadImage(sourceKey);
       const processedBuffer = await this.processImage(sourceBuffer, options);
 
-      await this.uploadImage(targetKey, processedBuffer, options.format || "jpeg");
+      await this.uploadImage(
+        targetKey,
+        processedBuffer,
+        options.format || "jpeg",
+      );
 
       return this.getImageMetadata(targetKey);
     } catch (error) {
@@ -150,7 +154,7 @@ export class ImageProcessor {
     format: string,
   ): Promise<void> {
     const contentType = `image/${format}`;
-    
+
     const command = new PutObjectCommand({
       Bucket: this.bucketName,
       Key: key,
@@ -252,30 +256,33 @@ export class ImageProcessor {
       sizes: Array<"thumbnail" | "medium" | "large">;
     }>,
   ): Promise<{ [plantId: string]: { [size: string]: ProcessedImage } }> {
-    const results: { [plantId: string]: { [size: string]: ProcessedImage } } = {};
+    const results: { [plantId: string]: { [size: string]: ProcessedImage } } =
+      {};
 
-    const promises = imageRequests.map(async ({ plantId, sourceKey, sizes }) => {
-      const sizeResults: { [size: string]: ProcessedImage } = {};
-      
-      for (const size of sizes) {
-        try {
-          const url = await this.getOptimizedImageUrl(plantId, size);
-          const targetKey = `plants/${size}/${plantId}.jpg`;
-          sizeResults[size] = await this.getImageMetadata(targetKey);
-        } catch (error) {
-          console.warn(`Batch process failed for ${plantId}:${size}`, error);
-          sizeResults[size] = {
-            url: this.getPlaceholderUrl(plantId, size),
-            width: 0,
-            height: 0,
-            size: 0,
-            format: "jpeg",
-          };
+    const promises = imageRequests.map(
+      async ({ plantId, sourceKey, sizes }) => {
+        const sizeResults: { [size: string]: ProcessedImage } = {};
+
+        for (const size of sizes) {
+          try {
+            const url = await this.getOptimizedImageUrl(plantId, size);
+            const targetKey = `plants/${size}/${plantId}.jpg`;
+            sizeResults[size] = await this.getImageMetadata(targetKey);
+          } catch (error) {
+            console.warn(`Batch process failed for ${plantId}:${size}`, error);
+            sizeResults[size] = {
+              url: this.getPlaceholderUrl(plantId, size),
+              width: 0,
+              height: 0,
+              size: 0,
+              format: "jpeg",
+            };
+          }
         }
-      }
-      
-      results[plantId] = sizeResults;
-    });
+
+        results[plantId] = sizeResults;
+      },
+    );
 
     await Promise.all(promises);
     return results;

@@ -80,10 +80,16 @@ export class EconomyBalancer {
       ? this.config.baseRewards.winRound
       : this.config.baseRewards.loseRound;
 
-    let multiplier = this.config.multipliers[`difficulty${difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}`];
+    let multiplier =
+      this.config.multipliers[
+        `difficulty${difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}`
+      ];
 
     if (won && streak >= this.config.multipliers.streakThreshold) {
-      const streakMultiplier = 1 + (streak - this.config.multipliers.streakThreshold + 1) * this.config.multipliers.streakBonus;
+      const streakMultiplier =
+        1 +
+        (streak - this.config.multipliers.streakThreshold + 1) *
+          this.config.multipliers.streakBonus;
       multiplier *= Math.min(streakMultiplier, 2.0);
     }
 
@@ -108,19 +114,25 @@ export class EconomyBalancer {
       ? this.config.baseRewards.winGame
       : this.config.baseRewards.loseGame;
 
-    let multiplier = this.config.multipliers[`difficulty${difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}`];
+    let multiplier =
+      this.config.multipliers[
+        `difficulty${difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}`
+      ];
 
     if (roundsWon === totalRounds && won) {
       multiplier *= this.config.multipliers.perfectGame;
     }
 
     if (won && gameStreak >= this.config.multipliers.streakThreshold) {
-      const streakMultiplier = 1 + (gameStreak - this.config.multipliers.streakThreshold + 1) * this.config.multipliers.streakBonus;
+      const streakMultiplier =
+        1 +
+        (gameStreak - this.config.multipliers.streakThreshold + 1) *
+          this.config.multipliers.streakBonus;
       multiplier *= Math.min(streakMultiplier, 2.5);
     }
 
     const performanceBonus = roundsWon / totalRounds;
-    multiplier *= (0.5 + performanceBonus);
+    multiplier *= 0.5 + performanceBonus;
 
     return Math.round(baseReward * multiplier);
   }
@@ -174,9 +186,9 @@ export class EconomyBalancer {
 
     const finalPrice = Math.round(
       basePrice *
-      rarityMultipliers[rarity] *
-      categoryMultipliers[category] *
-      demandFactor,
+        rarityMultipliers[rarity] *
+        categoryMultipliers[category] *
+        demandFactor,
     );
 
     return Math.max(1, finalPrice);
@@ -232,14 +244,17 @@ export class EconomyBalancer {
 
   estimateExpectedCoins(gamesPlayed: number, winRate: number): number {
     const avgRoundsPerGame = 5;
-    const avgRoundReward = (this.config.baseRewards.winRound * winRate) +
-      (this.config.baseRewards.loseRound * (1 - winRate));
-    const avgGameReward = (this.config.baseRewards.winGame * winRate) +
-      (this.config.baseRewards.loseGame * (1 - winRate));
+    const avgRoundReward =
+      this.config.baseRewards.winRound * winRate +
+      this.config.baseRewards.loseRound * (1 - winRate);
+    const avgGameReward =
+      this.config.baseRewards.winGame * winRate +
+      this.config.baseRewards.loseGame * (1 - winRate);
 
     const totalRoundRewards = gamesPlayed * avgRoundsPerGame * avgRoundReward;
     const totalGameRewards = gamesPlayed * avgGameReward;
-    const dailyBonuses = Math.floor(gamesPlayed / 3) * this.config.baseRewards.dailyBonus;
+    const dailyBonuses =
+      Math.floor(gamesPlayed / 3) * this.config.baseRewards.dailyBonus;
 
     return Math.round(totalRoundRewards + totalGameRewards + dailyBonuses);
   }
@@ -279,7 +294,10 @@ export class EconomyBalancer {
     metrics: Record<string, number>;
     recommendations: string[];
   } {
-    const expectedCoinsPerPlayer = this.estimateExpectedCoins(avgGamesPerPlayer, avgWinRate);
+    const expectedCoinsPerPlayer = this.estimateExpectedCoins(
+      avgGamesPerPlayer,
+      avgWinRate,
+    );
     const actualCoinsPerPlayer = totalCoins / totalPlayers;
     const coinRatio = actualCoinsPerPlayer / expectedCoinsPerPlayer;
 
@@ -328,6 +346,8 @@ export class EconomyBalancer {
   }
 }
 
-export const createEconomyBalancer = (config?: Partial<EconomyConfig>): EconomyBalancer => {
+export const createEconomyBalancer = (
+  config?: Partial<EconomyConfig>,
+): EconomyBalancer => {
   return new EconomyBalancer(config);
 };

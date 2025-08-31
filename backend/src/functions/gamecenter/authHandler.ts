@@ -1,7 +1,11 @@
-import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
-import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, GetCommand, PutCommand } from '@aws-sdk/lib-dynamodb';
-import crypto from 'crypto';
+import { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
+import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
+import {
+  DynamoDBDocumentClient,
+  GetCommand,
+  PutCommand,
+} from "@aws-sdk/lib-dynamodb";
+import crypto from "crypto";
 
 const dynamoClient = new DynamoDBClient({ region: process.env.AWS_REGION });
 const docClient = DynamoDBDocumentClient.from(dynamoClient);
@@ -39,39 +43,39 @@ export interface User {
 }
 
 export const handler = async (
-  event: APIGatewayProxyEvent
+  event: APIGatewayProxyEvent,
 ): Promise<APIGatewayProxyResult> => {
   const headers = {
-    'Content-Type': 'application/json',
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type,Authorization',
-    'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
+    "Content-Type": "application/json",
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Headers": "Content-Type,Authorization",
+    "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS",
   };
 
   try {
-    if (event.httpMethod === 'OPTIONS') {
+    if (event.httpMethod === "OPTIONS") {
       return {
         statusCode: 200,
         headers,
-        body: '',
+        body: "",
       };
     }
 
-    if (event.httpMethod !== 'POST') {
+    if (event.httpMethod !== "POST") {
       return {
         statusCode: 405,
         headers,
-        body: JSON.stringify({ error: 'Method not allowed' }),
+        body: JSON.stringify({ error: "Method not allowed" }),
       };
     }
 
-    const { token } = JSON.parse(event.body || '{}');
+    const { token } = JSON.parse(event.body || "{}");
 
     if (!token) {
       return {
         statusCode: 400,
         headers,
-        body: JSON.stringify({ error: 'Game Center token is required' }),
+        body: JSON.stringify({ error: "Game Center token is required" }),
       };
     }
 
@@ -83,18 +87,18 @@ export const handler = async (
       return {
         statusCode: 401,
         headers,
-        body: JSON.stringify({ error: 'Invalid Game Center token' }),
+        body: JSON.stringify({ error: "Invalid Game Center token" }),
       };
     }
-    
+
     // Validate the token (in production, you would verify the signature with Apple)
     const isValid = await validateGameCenterToken(tokenData);
-    
+
     if (!isValid) {
       return {
         statusCode: 401,
         headers,
-        body: JSON.stringify({ error: 'Invalid Game Center token' }),
+        body: JSON.stringify({ error: "Invalid Game Center token" }),
       };
     }
 
@@ -103,13 +107,13 @@ export const handler = async (
     try {
       user = await getOrCreateUser(tokenData.playerId);
     } catch (error) {
-      console.error('Database error in getOrCreateUser:', error);
+      console.error("Database error in getOrCreateUser:", error);
       return {
         statusCode: 500,
         headers,
-        body: JSON.stringify({ 
-          error: 'Internal server error',
-          message: error instanceof Error ? error.message : 'Unknown error'
+        body: JSON.stringify({
+          error: "Internal server error",
+          message: error instanceof Error ? error.message : "Unknown error",
         }),
       };
     }
@@ -123,13 +127,13 @@ export const handler = async (
       }),
     };
   } catch (error) {
-    console.error('Game Center authentication error:', error);
+    console.error("Game Center authentication error:", error);
     return {
       statusCode: 500,
       headers,
-      body: JSON.stringify({ 
-        error: 'Internal server error',
-        message: error instanceof Error ? error.message : 'Unknown error'
+      body: JSON.stringify({
+        error: "Internal server error",
+        message: error instanceof Error ? error.message : "Unknown error",
       }),
     };
   }
@@ -137,16 +141,23 @@ export const handler = async (
 
 function decodeGameCenterToken(token: string): GameCenterTokenData {
   try {
-    const decodedData = Buffer.from(token, 'base64').toString('utf-8');
+    const decodedData = Buffer.from(token, "base64").toString("utf-8");
     return JSON.parse(decodedData);
   } catch (error) {
-    throw new Error('Invalid token format');
+    throw new Error("Invalid token format");
   }
 }
 
-async function validateGameCenterToken(tokenData: GameCenterTokenData): Promise<boolean> {
+async function validateGameCenterToken(
+  tokenData: GameCenterTokenData,
+): Promise<boolean> {
   // Basic validation checks
-  if (!tokenData.playerId || !tokenData.signature || !tokenData.salt || !tokenData.timestamp) {
+  if (
+    !tokenData.playerId ||
+    !tokenData.signature ||
+    !tokenData.salt ||
+    !tokenData.timestamp
+  ) {
     return false;
   }
 
@@ -154,22 +165,24 @@ async function validateGameCenterToken(tokenData: GameCenterTokenData): Promise<
   const tokenTime = parseInt(tokenData.timestamp);
   const currentTime = Math.floor(Date.now() / 1000);
   const timeDiff = currentTime - tokenTime;
-  
+
   // Reject tokens that are too old (more than 5 minutes)
-  if (timeDiff > 300) { // 5 minutes
-    console.warn('Token is too old:', timeDiff);
+  if (timeDiff > 300) {
+    // 5 minutes
+    console.warn("Token is too old:", timeDiff);
     return false;
   }
-  
+
   // Reject tokens from the future (more than 1 minute ahead to account for clock skew)
-  if (timeDiff < -60) { // 1 minute in the future
-    console.warn('Token is from the future:', timeDiff);
+  if (timeDiff < -60) {
+    // 1 minute in the future
+    console.warn("Token is from the future:", timeDiff);
     return false;
   }
 
   // Validate bundle ID
-  if (tokenData.bundleId !== 'com.botanybattle.app') {
-    console.warn('Invalid bundle ID:', tokenData.bundleId);
+  if (tokenData.bundleId !== "com.botanybattle.app") {
+    console.warn("Invalid bundle ID:", tokenData.bundleId);
     return false;
   }
 
@@ -184,12 +197,14 @@ async function validateGameCenterToken(tokenData: GameCenterTokenData): Promise<
 async function getOrCreateUser(playerId: string): Promise<User> {
   try {
     // Try to get existing user
-    const getResult = await docClient.send(new GetCommand({
-      TableName: process.env.DYNAMODB_TABLE,
-      Key: {
-        id: playerId,
-      },
-    }));
+    const getResult = await docClient.send(
+      new GetCommand({
+        TableName: process.env.DYNAMODB_TABLE,
+        Key: {
+          id: playerId,
+        },
+      }),
+    );
 
     if (getResult.Item) {
       return getResult.Item as User;
@@ -207,7 +222,7 @@ async function getOrCreateUser(playerId: string): Promise<User> {
         currentStreak: 0,
         longestStreak: 0,
         eloRating: 1000,
-        rank: 'Seedling',
+        rank: "Seedling",
         plantsIdentified: 0,
         accuracyRate: 0.0,
       },
@@ -218,14 +233,16 @@ async function getOrCreateUser(playerId: string): Promise<User> {
       },
     };
 
-    await docClient.send(new PutCommand({
-      TableName: process.env.DYNAMODB_TABLE,
-      Item: newUser,
-    }));
+    await docClient.send(
+      new PutCommand({
+        TableName: process.env.DYNAMODB_TABLE,
+        Item: newUser,
+      }),
+    );
 
     return newUser;
   } catch (error) {
-    console.error('Error getting/creating user:', error);
+    console.error("Error getting/creating user:", error);
     throw error;
   }
 }

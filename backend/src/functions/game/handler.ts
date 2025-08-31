@@ -15,11 +15,11 @@ import {
   PostToConnectionCommand,
 } from "@aws-sdk/client-apigatewaymanagementapi";
 import Redis from "ioredis";
-import { 
-  updateELORatings, 
-  PlayerRating, 
+import {
+  updateELORatings,
+  PlayerRating,
   GameResult,
-  getMatchmakingRange 
+  getMatchmakingRange,
 } from "./eloRanking";
 import { updateUserELO } from "../user/handler";
 
@@ -32,7 +32,8 @@ const redis = new Redis({
   maxRetriesPerRequest: 3,
 });
 
-const USER_STATS_TABLE = process.env.USER_STATS_TABLE || 'botanybattle-user-stats-dev';
+const USER_STATS_TABLE =
+  process.env.USER_STATS_TABLE || "botanybattle-user-stats-dev";
 
 interface GameState {
   gameId: string;
@@ -41,12 +42,15 @@ interface GameState {
   maxRounds: number;
   status: "waiting" | "active" | "completed";
   scores: Record<string, number>;
-  playerStats: Record<string, {
-    correctAnswers: number;
-    totalAnswers: number;
-    averageResponseTime: number;
-    eloRating: number;
-  }>;
+  playerStats: Record<
+    string,
+    {
+      correctAnswers: number;
+      totalAnswers: number;
+      averageResponseTime: number;
+      eloRating: number;
+    }
+  >;
   roundStartTime?: number;
   gameStartTime: number;
   gameEndTime?: number;
@@ -154,14 +158,14 @@ async function findMatch(userId: string): Promise<APIGatewayProxyResult> {
     // Get user's current ELO rating
     const userStats = await getUserStats(userId);
     const userRating = userStats?.eloRating || 1000;
-    
+
     // Try to find an opponent with similar ELO rating
     const opponent = await findELOBasedOpponent(userId, userRating);
-    
+
     if (opponent) {
       // Remove opponent from queue
       await removeFromMatchmakingQueue(opponent.userId);
-      
+
       // Create game with both players
       const gameId = `game_${Date.now()}_${Math.random().toString(36).substring(7)}`;
       const gameState: GameState = {
@@ -176,20 +180,20 @@ async function findMatch(userId: string): Promise<APIGatewayProxyResult> {
             correctAnswers: 0,
             totalAnswers: 0,
             averageResponseTime: 0,
-            eloRating: opponent.eloRating
+            eloRating: opponent.eloRating,
           },
           [userId]: {
             correctAnswers: 0,
             totalAnswers: 0,
             averageResponseTime: 0,
-            eloRating: userRating
-          }
+            eloRating: userRating,
+          },
         },
-        gameStartTime: Date.now()
+        gameStartTime: Date.now(),
       };
 
       await saveGameState(gameState);
-      
+
       // Notify both players via WebSocket
       await notifyGameStart(gameState);
 
@@ -199,12 +203,12 @@ async function findMatch(userId: string): Promise<APIGatewayProxyResult> {
           "Content-Type": "application/json",
           "Access-Control-Allow-Origin": "*",
         },
-        body: JSON.stringify({ 
-          gameId, 
-          opponent: opponent.userId, 
+        body: JSON.stringify({
+          gameId,
+          opponent: opponent.userId,
           status: "matched",
           opponentRating: opponent.eloRating,
-          yourRating: userRating
+          yourRating: userRating,
         }),
       };
     } else {
@@ -217,15 +221,15 @@ async function findMatch(userId: string): Promise<APIGatewayProxyResult> {
           "Content-Type": "application/json",
           "Access-Control-Allow-Origin": "*",
         },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           status: "waiting",
           rating: userRating,
-          estimatedWaitTime: "30-60 seconds"
+          estimatedWaitTime: "30-60 seconds",
         }),
       };
     }
   } catch (error) {
-    console.error('Error in findMatch:', error);
+    console.error("Error in findMatch:", error);
     return {
       statusCode: 500,
       headers: {
@@ -303,12 +307,12 @@ async function submitAnswer(
   }
 
   const now = Date.now();
-  const responseTime = gameState.currentQuestion?.questionStartTime 
-    ? now - gameState.currentQuestion.questionStartTime 
+  const responseTime = gameState.currentQuestion?.questionStartTime
+    ? now - gameState.currentQuestion.questionStartTime
     : 0;
 
   const isCorrect = gameState.currentQuestion?.correctAnswer === answer;
-  
+
   // Update player stats
   const playerStats = gameState.playerStats[userId];
   playerStats.totalAnswers += 1;
@@ -316,13 +320,17 @@ async function submitAnswer(
     playerStats.correctAnswers += 1;
     gameState.scores[userId] += 100;
   }
-  
+
   // Update average response time
-  const totalResponseTime = playerStats.averageResponseTime * (playerStats.totalAnswers - 1) + responseTime;
-  playerStats.averageResponseTime = Math.round(totalResponseTime / playerStats.totalAnswers);
+  const totalResponseTime =
+    playerStats.averageResponseTime * (playerStats.totalAnswers - 1) +
+    responseTime;
+  playerStats.averageResponseTime = Math.round(
+    totalResponseTime / playerStats.totalAnswers,
+  );
 
   // Check if round should end or game should continue
-  const allPlayersAnswered = gameState.players.every(playerId => {
+  const allPlayersAnswered = gameState.players.every((playerId) => {
     // This is simplified - in reality you'd track per-round answers
     return true; // For now, assume round ends after any answer
   });
@@ -332,7 +340,7 @@ async function submitAnswer(
     gameState.status = "completed";
     gameState.gameEndTime = now;
     gameComplete = true;
-    
+
     // Determine winner and update ELO ratings
     await finalizeGame(gameState);
   } else if (allPlayersAnswered) {
@@ -355,8 +363,8 @@ async function submitAnswer(
     ...(gameComplete && {
       finalScore: gameState.scores[userId],
       winner: gameState.winner,
-      eloChange: gameState.eloChanges?.[userId]
-    })
+      eloChange: gameState.eloChanges?.[userId],
+    }),
   };
 
   return {
@@ -473,63 +481,74 @@ async function handleMessage(
 
 // ELO and Matchmaking Helper Functions
 
-async function getUserStats(userId: string): Promise<{ eloRating: number; gamesPlayed: number } | null> {
+async function getUserStats(
+  userId: string,
+): Promise<{ eloRating: number; gamesPlayed: number } | null> {
   try {
-    const result = await dynamoDbDoc.send(new GetCommand({
-      TableName: USER_STATS_TABLE,
-      Key: { userId }
-    }));
-    
+    const result = await dynamoDbDoc.send(
+      new GetCommand({
+        TableName: USER_STATS_TABLE,
+        Key: { userId },
+      }),
+    );
+
     if (result.Item) {
       return {
         eloRating: result.Item.eloRating || 1000,
-        gamesPlayed: result.Item.totalGamesPlayed || 0
+        gamesPlayed: result.Item.totalGamesPlayed || 0,
       };
     }
-    
+
     return { eloRating: 1000, gamesPlayed: 0 }; // Default for new users
   } catch (error) {
-    console.error('Error getting user stats:', error);
+    console.error("Error getting user stats:", error);
     return { eloRating: 1000, gamesPlayed: 0 };
   }
 }
 
-async function findELOBasedOpponent(userId: string, userRating: number): Promise<{ userId: string; eloRating: number; waitTime: number } | null> {
+async function findELOBasedOpponent(
+  userId: string,
+  userRating: number,
+): Promise<{ userId: string; eloRating: number; waitTime: number } | null> {
   try {
     // Get all waiting players
-    const waitingPlayers = await redis.hgetall('matchmaking:players');
-    
+    const waitingPlayers = await redis.hgetall("matchmaking:players");
+
     if (Object.keys(waitingPlayers).length === 0) {
       return null;
     }
 
-    let bestOpponent: { userId: string; eloRating: number; waitTime: number } | null = null;
+    let bestOpponent: {
+      userId: string;
+      eloRating: number;
+      waitTime: number;
+    } | null = null;
     let smallestRatingDiff = Infinity;
 
     for (const [playerId, playerData] of Object.entries(waitingPlayers)) {
       if (playerId === userId) continue;
-      
+
       const data = JSON.parse(playerData);
       const opponentRating = data.eloRating;
       const joinTime = data.joinTime;
       const waitTime = Date.now() - joinTime;
-      
+
       // Calculate acceptable rating range based on wait time
       const { min, max } = getMatchmakingRange(userRating, waitTime);
-      
+
       // Check if opponent is within acceptable range
       if (opponentRating >= min && opponentRating <= max) {
         const ratingDiff = Math.abs(userRating - opponentRating);
-        
+
         // Prefer closer rating matches, but factor in wait time
-        const matchScore = ratingDiff - (waitTime / 1000); // Reduce score for longer wait
-        
+        const matchScore = ratingDiff - waitTime / 1000; // Reduce score for longer wait
+
         if (matchScore < smallestRatingDiff) {
           smallestRatingDiff = matchScore;
           bestOpponent = {
             userId: playerId,
             eloRating: opponentRating,
-            waitTime
+            waitTime,
           };
         }
       }
@@ -537,23 +556,26 @@ async function findELOBasedOpponent(userId: string, userRating: number): Promise
 
     return bestOpponent;
   } catch (error) {
-    console.error('Error finding ELO-based opponent:', error);
+    console.error("Error finding ELO-based opponent:", error);
     return null;
   }
 }
 
-async function addToMatchmakingQueue(userId: string, eloRating: number): Promise<void> {
+async function addToMatchmakingQueue(
+  userId: string,
+  eloRating: number,
+): Promise<void> {
   const playerData = {
     eloRating,
-    joinTime: Date.now()
+    joinTime: Date.now(),
   };
-  
-  await redis.hset('matchmaking:players', userId, JSON.stringify(playerData));
-  await redis.expire('matchmaking:players', 600); // 10 minute expiry
+
+  await redis.hset("matchmaking:players", userId, JSON.stringify(playerData));
+  await redis.expire("matchmaking:players", 600); // 10 minute expiry
 }
 
 async function removeFromMatchmakingQueue(userId: string): Promise<void> {
-  await redis.hdel('matchmaking:players', userId);
+  await redis.hdel("matchmaking:players", userId);
 }
 
 async function finalizeGame(gameState: GameState): Promise<void> {
@@ -562,10 +584,10 @@ async function finalizeGame(gameState: GameState): Promise<void> {
     const [player1, player2] = gameState.players;
     const score1 = gameState.scores[player1];
     const score2 = gameState.scores[player2];
-    
+
     let winner: string;
     let loser: string;
-    
+
     if (score1 > score2) {
       winner = player1;
       loser = player2;
@@ -576,10 +598,10 @@ async function finalizeGame(gameState: GameState): Promise<void> {
       // Handle tie - higher accuracy wins, then faster average response time
       const stats1 = gameState.playerStats[player1];
       const stats2 = gameState.playerStats[player2];
-      
+
       const accuracy1 = stats1.correctAnswers / stats1.totalAnswers;
       const accuracy2 = stats2.correctAnswers / stats2.totalAnswers;
-      
+
       if (accuracy1 > accuracy2) {
         winner = player1;
         loser = player2;
@@ -597,27 +619,27 @@ async function finalizeGame(gameState: GameState): Promise<void> {
         }
       }
     }
-    
+
     gameState.winner = winner;
-    
+
     // Calculate ELO changes
     const winnerStats = gameState.playerStats[winner];
     const loserStats = gameState.playerStats[loser];
-    
+
     const winnerRating: PlayerRating = {
       userId: winner,
       currentRating: winnerStats.eloRating,
       gamesPlayed: (await getUserStats(winner))?.gamesPlayed || 0,
-      rank: ""
+      rank: "",
     };
-    
+
     const loserRating: PlayerRating = {
       userId: loser,
       currentRating: loserStats.eloRating,
       gamesPlayed: (await getUserStats(loser))?.gamesPlayed || 0,
-      rank: ""
+      rank: "",
     };
-    
+
     const gameResult: GameResult = {
       winner,
       loser,
@@ -625,35 +647,46 @@ async function finalizeGame(gameState: GameState): Promise<void> {
       loserScore: gameState.scores[loser],
       roundsPlayed: gameState.maxRounds,
       averageResponseTime: winnerStats.averageResponseTime,
-      accuracyRate: winnerStats.correctAnswers / winnerStats.totalAnswers
+      accuracyRate: winnerStats.correctAnswers / winnerStats.totalAnswers,
     };
-    
+
     const eloResults = updateELORatings(winnerRating, loserRating, gameResult);
-    
+
     // Store ELO changes in game state
     gameState.eloChanges = {
       [winner]: eloResults.winner.ratingChange,
-      [loser]: eloResults.loser.ratingChange
+      [loser]: eloResults.loser.ratingChange,
     };
-    
+
     // Update user ELO ratings in database
-    await updateUserELO(winner, eloResults.winner.newRating, eloResults.winner.ratingChange, 'win', {
-      accuracyRate: winnerStats.correctAnswers / winnerStats.totalAnswers,
-      averageResponseTime: winnerStats.averageResponseTime,
-      plantsIdentified: winnerStats.correctAnswers
-    });
-    
-    await updateUserELO(loser, eloResults.loser.newRating, eloResults.loser.ratingChange, 'loss', {
-      accuracyRate: loserStats.correctAnswers / loserStats.totalAnswers,
-      averageResponseTime: loserStats.averageResponseTime,
-      plantsIdentified: loserStats.correctAnswers
-    });
-    
+    await updateUserELO(
+      winner,
+      eloResults.winner.newRating,
+      eloResults.winner.ratingChange,
+      "win",
+      {
+        accuracyRate: winnerStats.correctAnswers / winnerStats.totalAnswers,
+        averageResponseTime: winnerStats.averageResponseTime,
+        plantsIdentified: winnerStats.correctAnswers,
+      },
+    );
+
+    await updateUserELO(
+      loser,
+      eloResults.loser.newRating,
+      eloResults.loser.ratingChange,
+      "loss",
+      {
+        accuracyRate: loserStats.correctAnswers / loserStats.totalAnswers,
+        averageResponseTime: loserStats.averageResponseTime,
+        plantsIdentified: loserStats.correctAnswers,
+      },
+    );
+
     // Notify players of game end
     await notifyGameEnd(gameState);
-    
   } catch (error) {
-    console.error('Error finalizing game:', error);
+    console.error("Error finalizing game:", error);
   }
 }
 
@@ -661,29 +694,34 @@ async function finalizeGame(gameState: GameState): Promise<void> {
 
 async function notifyGameStart(gameState: GameState): Promise<void> {
   const message = {
-    type: 'gameStarted',
+    type: "gameStarted",
     gameId: gameState.gameId,
     players: gameState.players,
     currentRound: gameState.currentRound,
-    maxRounds: gameState.maxRounds
+    maxRounds: gameState.maxRounds,
   };
-  
+
   for (const playerId of gameState.players) {
     await sendWebSocketMessage(playerId, message);
   }
 }
 
-async function notifyAnswerResult(gameState: GameState, userId: string, correct: boolean, responseTime: number): Promise<void> {
+async function notifyAnswerResult(
+  gameState: GameState,
+  userId: string,
+  correct: boolean,
+  responseTime: number,
+): Promise<void> {
   const message = {
-    type: 'answerResult',
+    type: "answerResult",
     gameId: gameState.gameId,
     userId,
     correct,
     responseTime,
     currentScores: gameState.scores,
-    currentRound: gameState.currentRound
+    currentRound: gameState.currentRound,
   };
-  
+
   for (const playerId of gameState.players) {
     await sendWebSocketMessage(playerId, message);
   }
@@ -691,32 +729,37 @@ async function notifyAnswerResult(gameState: GameState, userId: string, correct:
 
 async function notifyGameEnd(gameState: GameState): Promise<void> {
   const message = {
-    type: 'gameEnded',
+    type: "gameEnded",
     gameId: gameState.gameId,
     winner: gameState.winner,
     finalScores: gameState.scores,
     eloChanges: gameState.eloChanges,
-    gameStats: gameState.playerStats
+    gameStats: gameState.playerStats,
   };
-  
+
   for (const playerId of gameState.players) {
     await sendWebSocketMessage(playerId, message);
   }
 }
 
-async function sendWebSocketMessage(userId: string, message: any): Promise<void> {
+async function sendWebSocketMessage(
+  userId: string,
+  message: any,
+): Promise<void> {
   try {
     const connectionId = await redis.get(`user:${userId}:connection`);
     if (!connectionId) return;
-    
+
     const apiGateway = new ApiGatewayManagementApiClient({
-      endpoint: process.env.WEBSOCKET_API_ENDPOINT
+      endpoint: process.env.WEBSOCKET_API_ENDPOINT,
     });
-    
-    await apiGateway.send(new PostToConnectionCommand({
-      ConnectionId: connectionId,
-      Data: JSON.stringify(message)
-    }));
+
+    await apiGateway.send(
+      new PostToConnectionCommand({
+        ConnectionId: connectionId,
+        Data: JSON.stringify(message),
+      }),
+    );
   } catch (error) {
     console.error(`Error sending WebSocket message to ${userId}:`, error);
     // Connection might be stale, remove it
@@ -729,10 +772,10 @@ async function sendWebSocketMessage(userId: string, message: any): Promise<void>
 }
 
 // Export functions for testing
-export { 
+export {
   getUserStats,
   findELOBasedOpponent,
   addToMatchmakingQueue,
   removeFromMatchmakingQueue,
-  finalizeGame
+  finalizeGame,
 };

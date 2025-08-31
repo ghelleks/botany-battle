@@ -579,7 +579,7 @@ async function validatePlayerEconomy(
 ): Promise<APIGatewayProxyResult> {
   try {
     const inventory = await getUserInventoryData(userId);
-    
+
     const mockPlayerStats = {
       gamesPlayed: 50,
       gamesWon: 30,
@@ -635,7 +635,12 @@ async function getDynamicPricing(): Promise<APIGatewayProxyResult> {
         ...item,
         originalPrice: item.price,
         currentPrice: adjustedPrice,
-        demandLevel: mockPurchaseVolume > 150 ? "high" : mockPurchaseVolume > 75 ? "medium" : "low",
+        demandLevel:
+          mockPurchaseVolume > 150
+            ? "high"
+            : mockPurchaseVolume > 75
+              ? "medium"
+              : "low",
       };
     });
 
